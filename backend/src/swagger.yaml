@@ -1,0 +1,360 @@
+openapi: 3.0.0
+info:
+  title: NARICT SAVINGS AND LOAN SCHEME
+  description: NARICT SAVINGS AND LOAN SCHEME API documentation
+  version: 0.1.9
+
+
+servers:
+  - url: http://localhost:8000/api
+    description: Localhost base url
+
+paths:
+  /auth/register/admin:
+      post:
+        summary: Register an admin account
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Admin'
+        responses:
+          '201':
+            description: Admin account register successfully
+          '400':
+            description: Bad Request - Invalid input
+          '500':
+            description: Admin registration unsuccessful
+
+  /auth/register:
+      post:
+        summary: Register an account for user by an admin
+        security:
+          - bearerAuth: []
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        responses:
+          '201':
+            description: User account register successfully. Login details sent to user Email
+          '400':
+            description: Bad Request - Invalid input
+          '500':
+            description: User registration unsuccessful
+  
+  /auth/login:
+    post:
+      summary: Login endpoint for both admin and user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Login Successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  message:
+                    type: string
+                    example: "Login Successful"
+        '400':
+          description: Bad Request - Invalid email or password
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /auth/changePassword:
+    post:
+      summary: Change password endpoint
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                oldPassword:
+                  type: string
+                newPassword:
+                  type: string
+              required:
+                - oldPassword
+                - newPassword
+      responses:
+        '200':
+          description: Password changed Successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /auth/forgotPassword:
+    post:
+      summary: Forgot password endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+              required:
+                - email
+      responses:
+        '200':
+          description: Password reset email sent successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /auth/resetPassword:
+    post:
+      summary: Reset password endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+              required:
+                - token
+                - newPassword
+      responses:
+        '200':
+          description: Password reset successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /saving/deposit:
+    post:
+      summary: Make saving endpoint
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  example: 100
+              required:
+                - amount
+      responses:
+        '200':
+          description: Saving successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /saving/withdraw:
+    post:
+      summary: Make withdrawal endpoint
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  example: 100
+              required:
+                - amount
+      responses:
+        '200':
+          description: Withdrawal successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /saving/transactions:
+    get:
+      summary: Returns all user transactions
+      security:
+        - bearerAuth: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: User transactions retrieved successfully
+        '400':
+          description: Bad Request - Invalid input
+        '500':
+          description: Internal Server Error
+
+  /saving/userSaving:
+    post:
+      summary: Get user saving including transaction history by an Admin using user ipssNumber
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipssNumber:
+                  type: string
+              required:
+                - ipssNumber
+      responses:
+        '200':
+          description: User saving retrieved successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  
+  /loan/loan-terms:
+    post:
+      summary: Endpoint to view loan terms before calling the create-loan endpoint
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  example: 20000
+                term_month:
+                  type: integer
+                  example: 14
+              required:
+                - amount
+                - term_month
+      responses:
+        '200':
+          description: Loan term retrieved successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /loan/create-loan:
+    post:
+      summary: Endpoint to create a new loan
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  example: 20000
+                term_month:
+                  type: integer
+                  example: 14
+              required:
+                - amount
+                - term_month
+      responses:
+        '200':
+          description: Loan created successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+
+components:
+  schemas:
+    Admin:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - fullName
+        - email
+        - password
+
+    User:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        ipssNumber:
+          type: string
+      required:
+        - fullName
+        - email
+        - ipssNumber
+
+
+  securitySchemes:
+    bearerAuth: # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT # optional, arbitrary value for documentation purposes
