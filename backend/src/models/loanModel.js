@@ -17,7 +17,6 @@ const loanModelSchema = new Schema({
 
     ipssNumber: {
         type: Number,
-        unique: true,
         required: true,
         min: 10000,
         max: 999999
@@ -50,6 +49,16 @@ const loanModelSchema = new Schema({
     },
 
     repaymentAmount: {
+        type: Number,
+        required: true
+    },
+
+    recurringFee: {
+        type: Number,
+        required: true
+    },
+
+    finalPayment: {
         type: Number,
         required: true
     },

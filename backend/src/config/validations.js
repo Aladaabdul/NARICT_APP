@@ -40,7 +40,7 @@ const ValidateLoginData = (login) => {
             .pattern(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/)
             .required()
             .messages({
-                "string.pattern.base": "Password must have at least 1 digit, 1 lowercase, 1 uppercase, and be at least 8 characters long."
+                "string.pattern.base": "Invalid password or Email"
             }),
     });
     
@@ -92,10 +92,26 @@ const ValidateResetData = (data) => {
 }
 
 
+const ValidateIpss = (ipss) => {
+
+    const ipssNumber = Joi.object({
+        ipssNumber: Joi.number().integer().min(10000).max(999999).required().messages({
+            "number.base": "ipssNumber must be a number.",
+            "number.min": "ipssNumber must be at least 5 digits.",
+            "number.max": "ipssNumber must be at most 6 digits.",
+            "any.required": "ipssNumber is required"
+        }),
+    })
+
+    return ipssNumber.validate(ipss)
+}
+
+
 module.exports = { 
     ValidateUserData,
     ValidateLoginData,
     ValidateChangePassword,
     ValidateForgotPassword,
-    ValidateResetData
+    ValidateResetData,
+    ValidateIpss
 }

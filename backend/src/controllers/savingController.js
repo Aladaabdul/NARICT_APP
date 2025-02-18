@@ -1,24 +1,21 @@
 const savingModel = require("../models/savingModel");
 const userModel = require("../models/userModel");
+const validation = require("../config/validations");
 
 
 
 // Make deposit function
 const makeSaving = async function(req, res) {
 
-    const { amount } = req.body
-
-    if (req.user.role !== "user") {
-        return res.status(403).json({error: "Access denied! Login With User Account"})
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied!"})
     }
 
-    if (!amount) {
-        return res.status(400).json({error: "amount is required"})
+    const { ipssNumber, amount } = req.body
+
+    if (!amount || !ipssNumber) {
+        return res.status(400).json({error: "amount and ipssNumber are required"})
     }
-
-    const userId = req.user.id
-
-    if (!userId) return res.status(400).json({error: "Access denied"})
 
     try {
 
@@ -26,14 +23,16 @@ const makeSaving = async function(req, res) {
             return res.status(400).json({error: "Invalid deposit amount"})
         }
 
-        const User = await userModel.findOne({_id: userId});
+        const User = await userModel.findOne({ipssNumber: ipssNumber});
+
+        if (!User) return res.status(404).json({message: "No user found by this ipssNumber"})
 
         const saving = await savingModel.findOneAndUpdate(
-            { userId },
+            { ipssNumber },
             {
                 $inc: { totalAmount: amount },
                 $set: { lastUpdated: Date.now() },
-                $setOnInsert: { userId, ipssNumber: User.ipssNumber },
+                $setOnInsert: { userId: User._id, ipssNumber: ipssNumber },
                 $push: { transaction: { type: "deposit", amount, date: Date.now() } }
             },
             { new: true, upsert: true }
@@ -54,19 +53,16 @@ const makeSaving = async function(req, res) {
 // Withdraw saving function
 const withdrawSaving = async function(req, res) {
 
-    const { amount } = req.body
-
-    if (req.user.role !== "user") {
-        return res.status(403).json({error: "Access denied! Login With User Account"})
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied!"})
     }
 
-    if (!amount) {
-        return res.status(400).json({error: "amount is required"})
+    const { ipssNumber, amount } = req.body
+
+
+    if (!amount || !ipssNumber) {
+        return res.status(400).json({error: "amount and ipssNumber are required"})
     }
-
-    const userId = req.user.id
-
-    if (!userId) return res.status(400).json({error: "Access denied"})
 
     try {
 
@@ -74,7 +70,7 @@ const withdrawSaving = async function(req, res) {
             return res.status(400).json({error: "Invalid withdrawal amount"})
         }
 
-        let saving = await savingModel.findOne({userId})
+        let saving = await savingModel.findOne({ ipssNumber })
 
         if (!saving) {
             return res.status(404).json({error: "No saving found for this user"})
@@ -108,11 +104,19 @@ const withdrawSaving = async function(req, res) {
 // Get user transaction function
 const getTransactions = async function(req, res) {
 
+    if (req.user.role !== "user") {
+        return res.status(403).json({error: "Access denied!"})
+    }
+
     const userId = req.user.id
+
+    if (!userId) return res.status(400).json({error: "Access denied"})
 
     try {
 
-        let saving = await savingModel.findOne({userId})
+        let saving = await savingModel
+            .findOne({userId})
+            .select({ transaction: { $slice: -20 } });
 
         if (!saving) {
             return res.status(404).json({error: "No saving found for this user"})
@@ -120,7 +124,7 @@ const getTransactions = async function(req, res) {
 
         res.status(200).json({
             message: "User transactions retrieved successfully",
-            transaction: saving.transaction
+            transactions: saving.transaction
         })
 
     }
@@ -131,18 +135,51 @@ const getTransactions = async function(req, res) {
 }
 
 
-// Get user saving function
-const getUserSaving = async function(req, res) {
+// Users get their saving
+const getSaving = async function(req, res) {
 
-    const { ipssNumber } = req.body;
-
-    if (!ipssNumber) {
-        return res.status(400).json({error: "ipssNumber is required"})
+    if (req.user.role !== "user") {
+        return res.status(403).json({error: "Access denied!"})
     }
+
+    const userId = req.user.id;
+    
+        if (!userId) return res.status(400).json({error: "Access denied"})
+    
+        try {
+    
+            const saving = await savingModel.findOne({userId: userId}).select("-transaction")
+    
+            if (!saving) {
+                return res.status(404).json({message: "No savng found for this user"})
+            }
+    
+            return res.status(200).json({
+                message: "User saving retrieved successfully",
+                saving: saving
+            })
+    
+        } catch (error) {
+            console.log(error)
+            return res.status(500).json({error: "Unable to retrieve user saving"})
+        }
+}
+
+
+// Get user saving function using user ipssNumber by admin
+const getUserSaving = async function(req, res) {
 
     if (req.user.role !== "admin") {
         return res.status(403).json({error: "Access denied!"})
     }
+
+    const valid = validation.ValidateIpss(req.body)
+
+    if (valid.error) return res.status(400).json({
+        error: valid.error.details.map(detail => detail.message)
+    })
+
+    const { ipssNumber } = req.body;
 
     try {
 
@@ -171,5 +208,6 @@ module.exports = {
     makeSaving,
     withdrawSaving,
     getTransactions,
-    getUserSaving
+    getUserSaving,
+    getSaving
 }
