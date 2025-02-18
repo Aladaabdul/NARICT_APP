@@ -44,6 +44,8 @@ const calculateLoanInterest = function(amount, term_month) {
         totalInterest,
         interestAmount,
         repaymentAmount,
+        recurringFee: fixedInstallment,
+        finalPayment,
         installments: installments
     }
 }

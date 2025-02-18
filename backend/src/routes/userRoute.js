@@ -10,6 +10,7 @@ userRouter.post('/register', authenticateUser, userController.registerUser);
 userRouter.post('/login', userController.loginUser);
 userRouter.post('/changePassword', authenticateUser, userController.changePassword);
 userRouter.post('/forgotPassword', userController.forgotPassword);
-userRouter.post('/resetPassword', userController.resetPassword)
+userRouter.post('/resetPassword', userController.resetPassword);
+userRouter.get('/user/search', authenticateUser, userController.searchUser);
 
 module.exports = userRouter

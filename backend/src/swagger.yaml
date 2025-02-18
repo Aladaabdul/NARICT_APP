@@ -163,6 +163,37 @@ paths:
         '500':
           description: Internal Server Error
 
+  /auth/user/search:
+    get:
+      summary: Get user by query search using ipssNumber, email, fullName or combining them
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: ipssNumber
+          schema:
+            type: string
+          description: Search user by user ipssNumber
+        - in: query
+          name: email
+          schema:
+            type: string
+          description: Search user by email
+        - in: query
+          name: fullName
+          schema:
+            type: string
+          description: Search by the user fullName (case-insensitive)
+      responses:
+        '200':
+          description: Successful
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
   /saving/deposit:
     post:
       summary: Make saving endpoint
@@ -175,10 +206,14 @@ paths:
             schema:
               type: object
               properties:
+                ipssNumber:
+                  type: string
+                  example: "332266"
                 amount:
                   type: integer
                   example: 100
               required:
+                - ipssNumber
                 - amount
       responses:
         '200':
@@ -202,10 +237,14 @@ paths:
             schema:
               type: object
               properties:
+                ipssNumber:
+                  type: string
+                  example: "332266"
                 amount:
                   type: integer
                   example: 100
               required:
+                - ipssNumber
                 - amount
       responses:
         '200':
@@ -219,7 +258,7 @@ paths:
 
   /saving/transactions:
     get:
-      summary: Returns all user transactions
+      summary: Returns user last 20 transactions
       security:
         - bearerAuth: []
       produces:
@@ -227,6 +266,21 @@ paths:
       responses:
         '200':
           description: User transactions retrieved successfully
+        '400':
+          description: Bad Request - Invalid input
+        '500':
+          description: Internal Server Error
+
+  /saving/user-saving:
+    get:
+      summary: Returns user saving
+      security:
+        - bearerAuth: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: User saving retrieved successfully
         '400':
           description: Bad Request - Invalid input
         '500':
@@ -271,6 +325,9 @@ paths:
             schema:
               type: object
               properties:
+                ipssNumber:
+                  type: string
+                  example: "332266"
                 amount:
                   type: integer
                   example: 20000
@@ -278,6 +335,7 @@ paths:
                   type: integer
                   example: 14
               required:
+                - ipssNmuber
                 - amount
                 - term_month
       responses:
@@ -302,6 +360,9 @@ paths:
             schema:
               type: object
               properties:
+                ipssNumber:
+                  type: string
+                  example: "332266"
                 amount:
                   type: integer
                   example: 20000
@@ -309,11 +370,79 @@ paths:
                   type: integer
                   example: 14
               required:
+                - ipssNumber
                 - amount
                 - term_month
       responses:
         '200':
           description: Loan created successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /loan/get-active-loan:
+    get:
+      summary: Returns user active loan
+      security:
+        - bearerAuth: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Active loan retrieved successfully
+        '400':
+          description: Bad Request - Invalid input
+        '500':
+          description: Internal Server Error
+
+  /loan/get-loan:
+    post:
+      summary: Get user active loan by an Admin using user ipssNumber
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipssNumber:
+                  type: string
+              required:
+                - ipssNumber
+      responses:
+        '200':
+          description: User active loan retrieved successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  /loan/all-loan:
+    post:
+      summary: Return all user loans (Both active and paid) by an Admin using user ipssNumber
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipssNumber:
+                  type: string
+              required:
+                - ipssNumber
+      responses:
+        '200':
+          description: Loan retrieved successfully
         '400':
           description: Bad Request - Invalid Request
         '401':

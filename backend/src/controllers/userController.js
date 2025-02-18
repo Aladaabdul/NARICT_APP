@@ -339,6 +339,37 @@ const resetPassword = async function (req, res) {
 }
 
 
+// Search user function using query parameter
+const searchUser =  async function (req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied!"})
+    }
+
+    const { fullName, ipssNumber, email } = req.query;
+
+    try {
+
+        const filter = {};
+
+        if (ipssNumber) filter.ipssNumber = ipssNumber;
+        if (email) filter.email = email;
+        if (fullName) filter.fullName = { $regex: fullName, $options: "i" };
+
+        const user = await userModel
+            .findOne( filter )
+            .select("-password -resetToken -resetTokenExpires")
+
+        if (!user) return res.status(404).json({error: "No user found"})
+        
+        return res.status(200).json({user: user})
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: "Unable to get user"})
+    }
+}
+
 
 module.exports = {
 
@@ -347,5 +378,6 @@ module.exports = {
     loginUser,
     changePassword,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    searchUser
 }
