@@ -20,7 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.6",
     "nodemailer": "^6.10.0",
-    "swagger-ui-express": "^5.0.1",
+    "swagger-ui-express": "^4.3.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

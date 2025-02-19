@@ -23,8 +23,10 @@ app.use(cors());
 const CSS_URL = "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.3.0/swagger-ui.min.css";
 
 const swaggerDocument = yaml.load(
-    fs.readFileSync(path.join(__dirname, 'swagger.yaml'), 'utf-8')
+    fs.readFileSync(path.join(__dirname, "../public/swagger.yaml"), 'utf-8')
 );
+
+app.use(express.static(path.join(__dirname, "../public")));
 
 app.use(
     '/api-docs',

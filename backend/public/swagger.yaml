@@ -8,6 +8,8 @@ info:
 servers:
   - url: http://localhost:8000/api
     description: Localhost base url
+  - url: https://narict-app.vercel.app/api
+    description: Deploy base url
 
 paths:
   /auth/register/admin:
