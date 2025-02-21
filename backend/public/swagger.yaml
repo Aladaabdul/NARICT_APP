@@ -452,6 +452,37 @@ paths:
         '500':
           description: Internal Server Error
 
+  /loan/make-payment:
+    post:
+      summary: Endpoint to pay user monthly installment
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipssNumber:
+                  type: string
+                  example: "332266"
+                amount:
+                  type: integer
+                  example: 3500
+              required:
+                - ipssNmuber
+                - amount
+      responses:
+        '200':
+          description: Payment successful
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
 
 components:
   schemas:

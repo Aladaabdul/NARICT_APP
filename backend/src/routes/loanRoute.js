@@ -10,6 +10,7 @@ loanRouter.post('/create-loan', authenticateUser, loanController.createLoan);
 loanRouter.get('/get-active-loan', authenticateUser, loanController.getActiveLoan);
 loanRouter.post('/get-loan', authenticateUser, loanController.getUserActiveLoan);
 loanRouter.post('/all-loan', authenticateUser, loanController.getAllUserLoan);
+loanRouter.post('/make-payment', authenticateUser, loanController.loanRepayment);
 
 
 module.exports = loanRouter;
