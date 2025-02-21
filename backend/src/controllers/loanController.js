@@ -24,6 +24,10 @@ const calculateLoanTerms = async function (req, res) {
         if (typeof amount !== "number" || amount <= 0 || typeof term_month !== "number" || term_month <= 0) {
             return res.status(400).json({error: "Invalid loan amount or term_month"})
         }
+
+        const user = await userModel.findOne({ ipssNumber })
+
+        if (!user) return res.status(404).json({message: "No user found by this ipssNumber"})
         
         const loans = await loanModel.find({ ipssNumber })
 
@@ -71,7 +75,7 @@ const createLoan = async function (req, res) {
 
         if (!user) return res.status(404).json({message: "No user found by this ipssNumber"})
 
-        const loans = await loanModel.find({ ipssNumber })
+        const loans = await loanModel.find({ userId: user._id })
 
         const activeLoan = loans.some(loan => loan.status !== 'paid')
 
@@ -225,12 +229,86 @@ const getAllUserLoan = async function (req, res) {
 
 }
 
+// Repayment function
+const loanRepayment = async function (req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({message: "Access denied"})
+    }
+
+    const { ipssNumber, amount } = req.body;
+
+    if (!amount || !ipssNumber) {
+        return res.status(400).json({error: "amount and ipssNumber are required"})
+    }
+
+    if (typeof amount !== "number" || amount <= 0) {
+        return res.status(400).json({error: "Invalid amount"})
+    }
+
+    try {
+
+        const user = await userModel.findOne({ ipssNumber })
+
+        if (!user) return res.status(404).json({message: "No user found by this ipssNumber"})
+
+        const loan = await loanModel.findOne({ ipssNumber, status: "active" })
+
+        if (!loan) {
+            return res.status(404).json({
+                message: "No active loan found for user with this ipssNumber"
+            })
+        }
+
+        let remainingPayment = amount
+
+        // sort installments
+        loan.monthlyInstallment.sort((a,b) => a.month - b.month)
+
+        for (let installment of loan.monthlyInstallment) {
+
+            if (remainingPayment <= 0) break;
+
+            if (installment.paid) continue;
+
+            if (remainingPayment >= installment.amount) {
+                remainingPayment -= installment.amount
+                installment.paid = true;
+            }
+            else {
+                installment.amount -= remainingPayment;
+                remainingPayment = 0;
+            }
+        }
+
+        loan.repaymentAmount -= amount
+        if (loan.repaymentAmount <= 0) {
+            loan.repaymentAmount = 0;
+            loan.status = "paid"
+        }
+
+        await loan.save();
+
+        return res.status(200).json({
+            message: "Payment successful",
+            balance: loan.repaymentAmount,
+            installments: loan.monthlyInstallment
+        })
+    }
+    catch(error) {
+        console.log(error)
+        return res.status(500).json({error: "Unable to make payment"})
+    }
+}
+
+
 
 module.exports = {
     calculateLoanTerms,
     createLoan,
     getActiveLoan,
     getUserActiveLoan,
-    getAllUserLoan
+    getAllUserLoan,
+    loanRepayment
 }
 
