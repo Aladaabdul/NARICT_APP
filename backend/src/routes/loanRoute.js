@@ -11,6 +11,7 @@ loanRouter.get('/get-active-loan', authenticateUser, loanController.getActiveLoa
 loanRouter.post('/get-loan', authenticateUser, loanController.getUserActiveLoan);
 loanRouter.post('/all-loan', authenticateUser, loanController.getAllUserLoan);
 loanRouter.post('/make-payment', authenticateUser, loanController.loanRepayment);
+loanRouter.get('/cron-job', loanController.checkMonthlyInstallment);
 
 
 module.exports = loanRouter;
