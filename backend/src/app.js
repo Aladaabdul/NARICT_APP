@@ -48,3 +48,6 @@ app.use('/api/loan', loanRouter);
 app.listen(PORT, () => {
     console.log(`Server is running on PORT ${PORT}`)
 })
+
+
+module.exports = app

@@ -5,7 +5,7 @@ const uuid = require("uuid")
 const nodemailer = require("nodemailer")
 const jwt = require("jsonwebtoken");
 const validation = require("../config/validations");
-const { generatePassword } = require("../config/password")
+const passwordConfig = require("../config/password")
 
 const secretKey = process.env.SECRET_KEY
 
@@ -93,7 +93,7 @@ const registerUser = async function (req, res) {
             return res.status(403).json({message: "User with this email or ipssNumber already exist"})
         }
 
-        const tempPassword = generatePassword();
+        const tempPassword = passwordConfig.generatePassword();
 
         const hashedpassword = await bcrypt.hash(tempPassword, 10)
 
@@ -144,7 +144,7 @@ const registerUser = async function (req, res) {
 
             return res.status(201).json({
             message: `User account register successful. Login details sent to Email address: ${email}`,
-            tempPassord: tempPassword
+            tempPassword: tempPassword
         });
 
     })

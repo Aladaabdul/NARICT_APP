@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "test": "cross-env NODE_ENV=test mocha --exit",
+    "test": "mocha --exit --recursive",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
@@ -24,9 +24,12 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "chai": "^5.2.0",
+    "chai": "^4.3.6",
+    "chai-http": "^4.3.0",
     "cross-env": "^7.0.3",
+    "delay": "^4.4.1",
     "mocha": "^11.1.0",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "sinon": "^19.0.2"
   }
 }
