@@ -302,6 +302,51 @@ const loanRepayment = async function (req, res) {
 }
 
 
+const checkMonthlyInstallment = async function (req, res) {
+
+    let updatedLoans = [];
+
+    const loans = await loanModel.find({status: "active"});
+
+    for (let loan of loans) {
+
+        const today = new Date();
+        const loanStartDate = new Date(loan.createdAt)
+
+        const monthsPassed = 
+            (today.getFullYear() - loanStartDate.getFullYear()) * 12 + 
+            (today.getMonth() - loanStartDate.getMonth())
+
+        if (monthsPassed < 1) continue
+
+        loan.monthlyInstallment.sort((a,b) => a.month - b.month)
+
+        const currentInstallment = loan.monthlyInstallment.find(
+            (inst) => inst.month === monthsPassed
+        )
+
+        if (currentInstallment && !currentInstallment.paid) {
+
+            const penalty = loan.recurringFee * 0.05
+            const lastIndex = loan.monthlyInstallment.length - 1
+            loan.monthlyInstallment[lastIndex].amount += penalty
+            loan.repaymentAmount += penalty
+    
+            await loan.save();
+            updatedLoans.push({
+                loanId: loan._id,
+                newTotal: loan.repaymentAmount
+            });
+        }
+    }
+    return res.status(200).json({
+        message: "Penalties applied successfully",
+        updatedLoans: updatedLoans
+    })
+}
+
+
+
 
 module.exports = {
     calculateLoanTerms,
@@ -309,6 +354,7 @@ module.exports = {
     getActiveLoan,
     getUserActiveLoan,
     getAllUserLoan,
-    loanRepayment
+    loanRepayment,
+    checkMonthlyInstallment
 }
 

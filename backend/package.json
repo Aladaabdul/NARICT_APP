@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "cross-env NODE_ENV=test mocha --exit",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
   },
@@ -24,6 +24,9 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
+    "chai": "^5.2.0",
+    "cross-env": "^7.0.3",
+    "mocha": "^11.1.0",
     "nodemon": "^3.1.9"
   }
 }
