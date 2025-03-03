@@ -357,3 +357,62 @@ describe("User login controller", () => {
         expect(res.body).to.have.property("message", "Incorrect password or email provided")
     });
 })
+
+
+describe("User controller, Get 20 most recently created users", () => {
+
+    let adminToken, userToken;
+    
+    beforeEach(function () {
+        sinon.restore();
+        
+        adminToken = jwt.sign({ role: "admin" }, "secret");
+        userToken = jwt.sign({ role: "user" }, "secret");
+        sinon.stub(passwordConfig, "generatePassword").returns("Password1")
+        
+        sinon.stub(jwt, "verify").callsFake((token, secret) => {
+            if (token === adminToken) {
+                return { id: "admin123", role: "admin", email: "admin@gmail.com" };
+            } else if (token === userToken) {
+                return { id: "user123", role: "user", email: "user@gmail.com" };
+            }
+            return null;
+        });
+
+    });
+
+    it("should get at most 20 recently created users", async function() {
+
+        let existingUsers = [
+            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user1@gmail.com", createdAt: new Date("2023-01-01") },
+            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user2@gmail.com", createdAt: new Date("2025-01-01") },
+            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user3@gmail.com", createdAt: new Date("2020-01-01") },
+            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user4@gmail.com", createdAt: new Date("2021-01-01") },
+            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user5@gmail.com", createdAt: new Date("2024-01-01") },
+            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user6@gmail.com", createdAt: new Date("2024-01-01") },
+            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user7@gmail.com", createdAt: new Date("2019-01-01") },
+        ]
+
+        sinon.stub(User, "find").returns({
+            sort: sinon.stub().callsFake(function () {
+                existingUsers.sort((a, b) => b.createdAt - a.createdAt);
+                return this;
+            }),
+            limit: sinon.stub().callsFake(function () {
+                existingUsers = existingUsers.slice(0, 20);
+                return this;
+            }),
+            select: sinon.stub().resolves(existingUsers),
+        });
+
+        const res = await chai.request(server)
+            .get("/api/auth/get-users")
+            .set('Authorization', `Bearer ${adminToken}`)
+
+        console.log(res.body)
+
+        expect(res).to.have.status(200);
+        expect(res.body.users[0].email).to.be.equal("user2@gmail.com");
+        expect(res.body.users.length).to.be.at.most(20);
+    })
+})

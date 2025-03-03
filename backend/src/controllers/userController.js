@@ -368,6 +368,33 @@ const searchUser =  async function (req, res) {
         console.log(error)
         return res.status(500).json({error: "Unable to get user"})
     }
+};
+
+
+const getUsers = async function (req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied!"})
+    }
+
+    try {
+
+        const users = await userModel
+            .find({role: { $ne: "admin"} })
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .select("-password -resetToken -resetTokenExpires -role")
+
+        if (!users || users.length === 0) {
+            return res.status(404).json({message: "No user found"})
+        }
+
+        return res.status(200).json({users: users})
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: "Unable to get users"})
+    }
 }
 
 
@@ -379,5 +406,6 @@ module.exports = {
     changePassword,
     forgotPassword,
     resetPassword,
-    searchUser
+    searchUser,
+    getUsers
 }
