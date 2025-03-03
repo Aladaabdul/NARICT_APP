@@ -196,6 +196,23 @@ paths:
         '500':
           description: Internal Server Error
 
+
+  /auth/get-users:
+    get:
+      summary: Returns 20 recently created users
+      security:
+        - bearerAuth: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successful
+        '400':
+          description: Bad Request - Invalid input
+        '500':
+          description: Internal Server Error
+
+
   /saving/deposit:
     post:
       summary: Make saving endpoint
@@ -311,6 +328,22 @@ paths:
           description: Bad Request - Invalid Request
         '401':
           description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+    
+  /saving/get-savings:
+    get:
+      summary: Returns 20 recently modified savings
+      security:
+        - bearerAuth: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successful
+        '400':
+          description: Bad Request - Invalid input
         '500':
           description: Internal Server Error
 

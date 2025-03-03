@@ -12,5 +12,6 @@ userRouter.post('/changePassword', authenticateUser, userController.changePasswo
 userRouter.post('/forgotPassword', userController.forgotPassword);
 userRouter.post('/resetPassword', userController.resetPassword);
 userRouter.get('/user/search', authenticateUser, userController.searchUser);
+userRouter.get('/get-users', authenticateUser, userController.getUsers);
 
 module.exports = userRouter

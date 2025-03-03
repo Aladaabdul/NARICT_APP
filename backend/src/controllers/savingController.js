@@ -144,26 +144,26 @@ const getSaving = async function(req, res) {
 
     const userId = req.user.id;
     
-        if (!userId) return res.status(400).json({error: "Access denied"})
+    if (!userId) return res.status(400).json({error: "Access denied"})
     
-        try {
+    try {
     
-            const saving = await savingModel.findOne({userId: userId}).select("-transaction")
+        const saving = await savingModel.findOne({userId: userId}).select("-transaction")
     
-            if (!saving) {
-                return res.status(404).json({message: "No savng found for this user"})
-            }
-    
-            return res.status(200).json({
-                message: "User saving retrieved successfully",
-                saving: saving
-            })
-    
-        } catch (error) {
-            console.log(error)
-            return res.status(500).json({error: "Unable to retrieve user saving"})
+        if (!saving) {
+            return res.status(404).json({message: "No savng found for this user"})
         }
-}
+    
+        return res.status(200).json({
+            message: "User saving retrieved successfully",
+            saving: saving
+        })
+    
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: "Unable to retrieve user saving"})
+    }
+};
 
 
 // Get user saving function using user ipssNumber by admin
@@ -202,6 +202,49 @@ const getUserSaving = async function(req, res) {
 }
 
 
+// Get 20 recently created savings
+const getAllSavings = async function(req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied"})
+    }
+
+    try {
+
+        const savings = await savingModel.aggregate([
+
+            { $sort: { lastUpdated: -1 } },
+            { $limit: 20 },
+            {
+                $addFields: {
+                    latestTransaction: { $arrayElemAt: [{ $sortArray: { input: "$transaction", sortBy: { date: -1 } } }, 0] }
+                }
+            },
+
+            {
+                $project: {
+                    _id: 1,
+                    ipssNumber: 1,
+                    lastUpdated: 1,
+                    totalAmount: 1,
+                    userId: 1,
+                    transaction: { $cond: { if: { $gt: [{ $size: "$transaction" }, 0] }, then: ["$latestTransaction"], else: [] } }
+                }
+            }
+        ]);
+
+        if (!savings || savings.length === 0) {
+            return res.status(404).json({message: "No saving found"})
+        }
+
+        return res.status(200).json({savings: savings})
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({message: "Unable to get savings"})
+    }
+}
+
 
 
 module.exports = {
@@ -209,5 +252,6 @@ module.exports = {
     withdrawSaving,
     getTransactions,
     getUserSaving,
-    getSaving
+    getSaving,
+    getAllSavings
 }

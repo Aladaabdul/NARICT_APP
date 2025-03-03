@@ -10,6 +10,7 @@ savingRouter.post('/withdraw', authenticateUser, savingController.withdrawSaving
 savingRouter.get('/transactions', authenticateUser, savingController.getTransactions);
 savingRouter.get('/user-saving', authenticateUser, savingController.getSaving);
 savingRouter.post('/userSaving', authenticateUser, savingController.getUserSaving);
+savingRouter.get('/get-savings', authenticateUser, savingController.getAllSavings);
 
 
 module.exports = savingRouter;
