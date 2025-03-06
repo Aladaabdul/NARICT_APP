@@ -409,8 +409,6 @@ describe("User controller, Get 20 most recently created users", () => {
             .get("/api/auth/get-users")
             .set('Authorization', `Bearer ${adminToken}`)
 
-        console.log(res.body)
-
         expect(res).to.have.status(200);
         expect(res.body.users[0].email).to.be.equal("user2@gmail.com");
         expect(res.body.users.length).to.be.at.most(20);
