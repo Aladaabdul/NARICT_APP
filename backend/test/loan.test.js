@@ -138,19 +138,19 @@ describe("loan controller, create loan", () => {
                     {
                     "month": 1,
                     "amount": 6933,
-                    "paid": true,
+                    "paid": false,
                     _id: new mongoose.Types.ObjectId()
                 },
                 {
                     "month": 1,
                     "amount": 6933,
-                    "paid": true,
+                    "paid": false,
                     _id: new mongoose.Types.ObjectId()
                 }, 
                 {
                     "month": 1,
                     "amount": 6934,
-                    "paid": true,
+                    "paid": false,
                     _id: new mongoose.Types.ObjectId()
                 }
                 ],
@@ -392,3 +392,73 @@ describe("loan controller, loan repayment", () => {
         expect(res.body).to.have.property("message", "No active loan found for user with this ipssNumber");
     });
 });
+
+
+describe("loan controller, checking monthly installments", () => {
+
+    let clock;
+
+    beforeEach(function () {
+        
+        sinon.restore();
+        // clock = sinon.useFakeTimers(new Date(2025, 1, 4).getTime());
+    
+    });
+
+    afterEach(function () {
+        sinon.restore();
+        // clock.restore();
+    });
+
+    it("should penalize user for defaulted monthly payment", async function () {
+        this.timeout(20000)
+
+        const loans = [
+            {
+                _id: new mongoose.Types.ObjectId(),
+                fullName: 'Abdul Alada',
+                ipssNumber: 332266,
+                amount: 20000,
+                term_month: 3,
+                status: 'active',
+                totalInterest: 2.5,
+                interestAmount: 500,
+                repaymentAmount: 20800,
+                recurringFee: 6933,
+                finalPayment: 6934,
+                monthlyInstallment: [
+                    {
+                    "month": 1,
+                    "amount": 6933,
+                    "paid": false,
+                    _id: new mongoose.Types.ObjectId()
+                },
+                {
+                    "month": 2,
+                    "amount": 6933,
+                    "paid": false,
+                    _id: new mongoose.Types.ObjectId()
+                }, 
+                {
+                    "month": 3,
+                    "amount": 6934,
+                    "paid": false,
+                    _id: new mongoose.Types.ObjectId()
+                }
+                ],
+                createdAt: '2025-02-04T10:00:50.101Z',
+                save: sinon.stub().resolves()
+            }
+        ]
+
+        sinon.stub(Loan, "find").resolves(loans);
+
+        const res = await chai.request(server)
+            .get("/api/loan/cron-job")
+
+        console.log(res.body)
+        
+        expect(res).to.have.status(200);
+        expect(loans[0].save.calledOnce).to.be.true;
+    })
+})

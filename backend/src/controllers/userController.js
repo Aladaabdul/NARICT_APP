@@ -51,9 +51,9 @@ const registerAdmin = async function (req, res) {
 
         return res.status(201).json({message: "Admin account register successfully"})
     } catch (error) {
-        if (error.code === 11000) {
-            return res.status(400).json({ error: "Duplicate entry detected." });
-        }
+        // if (error.code === 11000) {
+        //     return res.status(400).json({ error: "Duplicate entry detected." });
+        // }
         console.log(error)
         return res.status(500).json({error: "Admin resgistration unsuccessful"})
     }
@@ -180,6 +180,8 @@ const loginUser = async function (req, res) {
 
         return res.status(200).json({
             message: "Login Successfully",
+            role: existingUser.role,
+            fullName: existingUser.fullName,
             token
         })
     }
