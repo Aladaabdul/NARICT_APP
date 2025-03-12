@@ -58,12 +58,12 @@ paths:
             schema:
               type: object
               properties:
-                email:
+                ipssNumber:
                   type: string
                 password:
                   type: string
               required:
-                - email
+                - ipssNumber
                 - password
       responses:
         '200':
@@ -79,7 +79,7 @@ paths:
                     type: string
                     example: "Login Successful"
         '400':
-          description: Bad Request - Invalid email or password
+          description: Bad Request - Invalid ipssNumber or password
         '401':
           description: Unauthorized - Invalid credentials
         '500':
@@ -87,7 +87,7 @@ paths:
 
   /auth/changePassword:
     post:
-      summary: Change password endpoint
+      summary: Change password endpoint. user and admin change their password when they have access to their dashboard
       security:
           - bearerAuth: []
       requestBody:
@@ -114,33 +114,35 @@ paths:
         '500':
           description: Internal Server Error
 
-  /auth/forgotPassword:
-    post:
-      summary: Forgot password endpoint
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                email:
-                  type: string
-              required:
-                - email
-      responses:
-        '200':
-          description: Password reset email sent successfully
-        '400':
-          description: Bad Request - Invalid Request
-        '401':
-          description: Unauthorized - Invalid credentials
-        '500':
-          description: Internal Server Error
+  # /auth/forgotPassword:
+  #   post:
+  #     summary: Forgot password endpoint
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         application/json:
+  #           schema:
+  #             type: object
+  #             properties:
+  #               email:
+  #                 type: string
+  #             required:
+  #               - email
+  #     responses:
+  #       '200':
+  #         description: Password reset email sent successfully
+  #       '400':
+  #         description: Bad Request - Invalid Request
+  #       '401':
+  #         description: Unauthorized - Invalid credentials
+  #       '500':
+  #         description: Internal Server Error
 
   /auth/resetPassword:
     post:
-      summary: Reset password endpoint
+      summary: Reset password endpoint. Admin reset user password when they forgot thier password
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -148,12 +150,12 @@ paths:
             schema:
               type: object
               properties:
-                token:
+                ipssNumber:
                   type: string
                 newPassword:
                   type: string
               required:
-                - token
+                - ipssNumber
                 - newPassword
       responses:
         '200':
@@ -167,7 +169,7 @@ paths:
 
   /auth/user/search:
     get:
-      summary: Get user by query search using ipssNumber, email, fullName or combining them
+      summary: Get user details by query search using ipssNumber, fullName or combining them
       security:
         - bearerAuth: []
       parameters:
@@ -176,11 +178,6 @@ paths:
           schema:
             type: string
           description: Search user by user ipssNumber
-        - in: query
-          name: email
-          schema:
-            type: string
-          description: Search user by email
         - in: query
           name: fullName
           schema:
@@ -196,10 +193,37 @@ paths:
         '500':
           description: Internal Server Error
 
+  
+  /auth/user/get-user-details:
+    post:
+      summary: Get all user info using ipssNumber by an admin
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipssNumber:
+                  type: string
+              required:
+                - ipssNumber
+      responses:
+        '200':
+          description: User details retrieved successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
 
-  /auth/get-users:
+
+  /auth/get-users-details:
     get:
-      summary: Returns 20 recently created users
+      summary: Returns 20 recently created users details
       security:
         - bearerAuth: []
       produces:
@@ -418,6 +442,63 @@ paths:
         '500':
           description: Internal Server Error
 
+
+  /loan/update-status:
+    patch:
+      summary: Endpoint to update pending loan status to "approved" or "rejected"
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipssNumber:
+                  type: string
+                  example: "332266"
+                status:
+                  type: string
+                  example: "approved"
+      responses:
+        '200':
+          description: Loan status updated successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+    
+  /loan/get-loans-by-status:
+    post:
+      summary: Get loans by specifying the status("pending", "approved", "rejected", "completed")
+      security:
+          - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+              required:
+                - status
+      responses:
+        '200':
+          description: loans retrieved successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+
   /loan/get-active-loan:
     get:
       summary: Returns user active loan
@@ -461,7 +542,7 @@ paths:
 
   /loan/all-loan:
     post:
-      summary: Return all user loans (Both active and paid) by an Admin using user ipssNumber
+      summary: Return all user loans history by an Admin using user ipssNumber
       security:
           - bearerAuth: []
       requestBody:
@@ -517,6 +598,42 @@ paths:
           description: Internal Server Error
 
 
+  /dashboard/user:
+    get:
+      summary: Get user dashboard information
+      security:
+          - bearerAuth: []
+      produces:
+        application/json:
+      responses:
+        '200':
+          description: User info retrieved successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+  
+  /dashboard/admin:
+    get:
+      summary: Get admin dashboard information
+      security:
+          - bearerAuth: []
+      produces:
+        application/json:
+      responses:
+        '200':
+          description: Dashboard info retrieved successfully
+        '400':
+          description: Bad Request - Invalid Request
+        '401':
+          description: Unauthorized - Invalid credentials
+        '500':
+          description: Internal Server Error
+
+
 components:
   schemas:
     Admin:
@@ -524,28 +641,28 @@ components:
       properties:
         fullName:
           type: string
-        email:
+        ipssNumber:
           type: string
-        password:
+        phoneNumber:
           type: string
       required:
         - fullName
-        - email
-        - password
+        - ipssNumber
+        - phoneNumber
 
     User:
       type: object
       properties:
         fullName:
           type: string
-        email:
-          type: string
         ipssNumber:
+          type: string
+        phoneNumber:
           type: string
       required:
         - fullName
-        - email
         - ipssNumber
+        - phoneNumber
 
 
   securitySchemes:

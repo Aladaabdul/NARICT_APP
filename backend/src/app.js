@@ -9,6 +9,7 @@ const { ConnectTOMongo } = require("./config/db")
 const userRouter = require("./routes/userRoute")
 const savingRouter = require("./routes/savingRoute")
 const loanRouter = require("./routes/loanRoute")
+const dashboardRouter = require("./routes/dashboardRoute")
 
 const app = express()
 const PORT = 8000 || process.env.PORT
@@ -42,6 +43,7 @@ app.use(
 app.use('/api/auth', userRouter);
 app.use('/api/saving', savingRouter);
 app.use('/api/loan', loanRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 
 

@@ -31,15 +31,23 @@ const calculateLoanTerms = async function (req, res) {
         
         const loans = await loanModel.find({ ipssNumber })
 
-        const activeLoan = loans.some(loan => loan.status !== 'paid')
+        const hasPendingLoan = loans.some(loan => loan.status === "pending");
+        const approvedLoan = loans.find(loan => loan.status === "approved");
 
-        if (activeLoan) {
+        if (hasPendingLoan) {
             return res.status(400).json({
-                error: "You still have an active loan! Please pay up to take another Loan"
-            })
+                error: "You have a pending loan! Please wait for approval or rejection before requesting another loan."
+            });
         }
 
-        const loanTerms = calculateLoanInterest(amount, term_month);
+        let loanTerms;
+        let totalAmount = amount;
+
+        if (approvedLoan) {
+            totalAmount += approvedLoan.repaymentAmount;
+        }
+
+        loanTerms = calculateLoanInterest(totalAmount, term_month);
 
         return res.status(200).json({
             message: "Loan terms",
@@ -55,11 +63,11 @@ const calculateLoanTerms = async function (req, res) {
 // Create a new loan function
 const createLoan = async function (req, res) {
 
-    const { amount, term_month, ipssNumber } = req.body;
-
     if (req.user.role !== 'admin') {
         return res.status(403).json({message: "Access denied!"})
     }
+
+    const { amount, term_month, ipssNumber } = req.body;
 
     if (!amount || !term_month || !ipssNumber) {
     return res.status(400).json({error: "amount, term_month and ipssNumber are required"})
@@ -77,15 +85,28 @@ const createLoan = async function (req, res) {
 
         const loans = await loanModel.find({ userId: user._id })
 
-        const activeLoan = loans.some(loan => loan.status !== 'paid')
+        const hasPendingLoan = loans.some(loan => loan.status === "pending");
+        const approvedLoan = loans.find(loan => loan.status === "approved");
 
-        if (activeLoan) {
+        if (hasPendingLoan) {
             return res.status(400).json({
-                error: "You still have an active loan! Please pay up to take another Loan"
-            })
+                error: "You have a pending loan! Please wait for approval or rejection before requesting another loan."
+            });
         }
 
-        const loanTerms = calculateLoanInterest(amount, term_month);
+        let totalAmount = amount;
+        let loanTerms;
+        let loanStatus = "pending"
+
+        if (approvedLoan) {
+            totalAmount += approvedLoan.repaymentAmount;
+            approvedLoan.monthlyInstallment.forEach(installment => installment.paid = true)
+            approvedLoan.status = "completed"
+            await approvedLoan.save();
+            loanStatus = "approved";
+        }
+
+        loanTerms = calculateLoanInterest(totalAmount, term_month);
 
         const loan = new loanModel({
             userId: user._id,
@@ -93,9 +114,10 @@ const createLoan = async function (req, res) {
             ipssNumber: user.ipssNumber,
             amount,
             term_month,
-            status: "active",
+            status: loanStatus,
             totalInterest: loanTerms.totalInterest,
             interestAmount: loanTerms.interestAmount,
+            totalInterestAmount: loanTerms.totalInterestAmount,
             repaymentAmount: loanTerms.repaymentAmount,
             recurringFee: loanTerms.recurringFee,
             finalPayment: loanTerms.finalPayment,
@@ -116,6 +138,77 @@ const createLoan = async function (req, res) {
 }
 
 
+const updateLoanStatus = async function (req, res) {
+
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({message: "Access denied!"})
+    }
+
+    const { ipssNumber, status } = req.body;
+
+    if (!["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Status must be 'approved' or 'rejected' " });
+    }
+
+    try {
+
+        const userPendingLoan = await loanModel.findOneAndUpdate(
+            { ipssNumber, status: "pending" },
+            { status: status },
+            { new: true }
+        )
+
+        if (!userPendingLoan) {
+            return res.status(400).json({message: "No pending loan found to update"})
+        }
+
+        return res.status(200).json({
+            message: `Loan status updated to '${status}' successfully`,
+            updatedLoan: userPendingLoan
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({message: "Unable to update loan status"})
+    }
+};
+
+
+// Get all loan by status
+const getLoansByStatus = async function (req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({ message: "Access denied!" })
+    }
+    
+    const { status } = req.body;
+
+    if (!["approved", "rejected", "pending", "completed"].includes(status)) {
+        return res.status(400).json({
+             message: "Invalid status. Status must be 'approved' or 'rejected' or 'pending', 'completed' " 
+        });
+    }
+
+    try {
+
+        const Loans = await loanModel.find({ status: status });
+
+        if (!Loans || Loans.length === 0) {
+            return res.status(404).json({message: `No ${status} loans found`})
+        }
+
+        return res.status(201).json({
+            message: `${status} Loans`,
+            Loans
+        });
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({message: `Unable to get ${status} loan`})
+    }
+}
+
+
 // Get User Active Loan
 const getActiveLoan = async function (req, res) {
 
@@ -129,7 +222,7 @@ const getActiveLoan = async function (req, res) {
 
     try {
 
-        const loan = await loanModel.findOne({userId: userId, status: "active"})
+        const loan = await loanModel.findOne({userId: userId, status: "approved"})
 
         if (!loan) {
             return res.status(404).json({message: "No active loan found"})
@@ -168,7 +261,7 @@ const getUserActiveLoan = async function (req, res) {
 
         if (!user) return res.status(404).json({message: "No user found by this ipssNumber"})
 
-        const loan = await loanModel.findOne({ipssNumber: ipssNumber, status: 'active'})
+        const loan = await loanModel.findOne({ipssNumber: ipssNumber, status: 'approved'})
 
         if (!loan) {
             return res.status(404).json({
@@ -188,7 +281,7 @@ const getUserActiveLoan = async function (req, res) {
 
 }
 
-// Get all user loan (Both paid and active) by admin using user ipssNumber
+// Get all user loan history by admin using user ipssNumber
 const getAllUserLoan = async function (req, res) {
 
     if (req.user.role !== 'admin') {
@@ -219,7 +312,7 @@ const getAllUserLoan = async function (req, res) {
 
         return res.status(200).json({
             message: "Loan retrieved successfully",
-            activeLoan: loan
+            Loans: loan
         })
 
     } catch(error) {
@@ -252,7 +345,7 @@ const loanRepayment = async function (req, res) {
 
         if (!user) return res.status(404).json({message: "No user found by this ipssNumber"})
 
-        const loan = await loanModel.findOne({ ipssNumber, status: "active" })
+        const loan = await loanModel.findOne({ ipssNumber, status: "approved" })
 
         if (!loan) {
             return res.status(404).json({
@@ -284,7 +377,7 @@ const loanRepayment = async function (req, res) {
         loan.repaymentAmount -= amount
         if (loan.repaymentAmount <= 0) {
             loan.repaymentAmount = 0;
-            loan.status = "paid"
+            loan.status = "completed"
         }
 
         await loan.save();
@@ -306,7 +399,7 @@ const checkMonthlyInstallment = async function (req, res) {
 
     let updatedLoans = [];
 
-    const loans = await loanModel.find({status: "active"});
+    const loans = await loanModel.find({status: "approved"});
 
     for (let loan of loans) {
 
@@ -330,6 +423,7 @@ const checkMonthlyInstallment = async function (req, res) {
             const penalty = loan.recurringFee * 0.05
             const lastIndex = loan.monthlyInstallment.length - 1
             loan.monthlyInstallment[lastIndex].amount += penalty
+            loan.totalInterestAmount += penalty
             loan.repaymentAmount += penalty
     
             await loan.save();
@@ -355,6 +449,8 @@ module.exports = {
     getUserActiveLoan,
     getAllUserLoan,
     loanRepayment,
-    checkMonthlyInstallment
+    checkMonthlyInstallment,
+    updateLoanStatus,
+    getLoansByStatus
 }
 

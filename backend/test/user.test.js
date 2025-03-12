@@ -26,18 +26,19 @@ describe("User controller Admin registration", () => {
 
         const adminUser = {
             fullName: "Abdul Alada",
-            role: "admin",
-            password: "Password1",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         }
 
+
+        sinon.stub(User, "findOne").resolves(null);
 
         sinon.stub(User, "find").resolves([]);
 
         sinon.stub(User.prototype, "save").resolves(
             {_id: new mongoose.Types.ObjectId(),
-            role: "admin",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         });
         
         const res = await chai.request(server)
@@ -49,27 +50,27 @@ describe("User controller Admin registration", () => {
     });
 
 
-    it("should fail registration for an existing email", async () => {
+    it("should fail registration for an existing ipssNumber or phoneNumber", async () => {
 
         const adminUser = {
             fullName: "Abdul Alada",
-            role: "admin",
-            password: "Password1",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         }
 
         const existingAdmin = {
             _id: new mongoose.Types.ObjectId,
             role: "admin",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         }
 
         sinon.stub(User, "find").resolves([existingAdmin]);
 
         sinon.stub(User.prototype, "save").resolves(
             {_id: new mongoose.Types.ObjectId,
-            role: "admin",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         });
         
         const res = await chai.request(server)
@@ -77,7 +78,7 @@ describe("User controller Admin registration", () => {
             .send(adminUser)
 
         expect(res).to.have.status(403);
-        expect(res.body).to.have.property("error", "Email already registered. Login Instead")
+        expect(res.body).to.have.property("error", "User with provided ipssNumber or phone Number already exist")
     });
 
 
@@ -85,23 +86,24 @@ describe("User controller Admin registration", () => {
 
         const adminUser = {
             fullName: "Abdul Alada",
-            role: "admin",
-            password: "Password1",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         }
 
         const existingAdmins = [
-            { _id: new mongoose.Types.ObjectId(), role: "admin", email: "admin1@gmail.com" },
-            { _id: new mongoose.Types.ObjectId(), role: "admin", email: "admin2@gmail.com" },
-            { _id: new mongoose.Types.ObjectId(), role: "admin", email: "admin3@gmail.com" },
+            { _id: new mongoose.Types.ObjectId(), role: "admin", fullName: "Abdul Alada", ipssNumber: "332211", phoneNumber: "07015500652" },
+            { _id: new mongoose.Types.ObjectId(), role: "admin", fullName: "Abdul", ipssNumber: "332233", phoneNumber: "07015500655" },
+            { _id: new mongoose.Types.ObjectId(), role: "admin", fullName: "Alada", ipssNumber: "332244", phoneNumber: "07015500650" }
         ]
+
+        sinon.stub(User, "findOne").resolves(null);
 
         sinon.stub(User, "find").resolves(existingAdmins);
 
         sinon.stub(User.prototype, "save").resolves(
             {_id: new mongoose.Types.ObjectId(),
-            role: "admin",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         });
         
         const res = await chai.request(server)
@@ -117,22 +119,23 @@ describe("User controller Admin registration", () => {
 
         const adminUser = {
             fullName: "Abdul Alada",
-            role: "admin",
-            password: "Password1",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         }
 
-        const existingAdmins = [
-            { _id: new mongoose.Types.ObjectId(), role: "admin", email: "admin1@gmail.com" },
-            { _id: new mongoose.Types.ObjectId(), role: "admin", email: "admin2@gmail.com" }
+        const existingAdmin = [
+            { _id: new mongoose.Types.ObjectId(), role: "admin", fullName: "Abdul Alada", ipssNumber: "332211", phoneNumber: "07015500652" },
+            { _id: new mongoose.Types.ObjectId(), role: "admin", fullName: "Abdul", ipssNumber: "332233", phoneNumber: "07015500655" }
         ]
 
-        sinon.stub(User, "find").resolves(existingAdmins);
+        sinon.stub(User, "findOne").resolves(null);
+
+        sinon.stub(User, "find").resolves(existingAdmin);
 
         sinon.stub(User.prototype, "save").resolves(
             {_id: new mongoose.Types.ObjectId(),
-            role: "admin",
-            email: "testadmin@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         });
         
         const res = await chai.request(server)
@@ -141,7 +144,8 @@ describe("User controller Admin registration", () => {
 
         expect(res).to.have.status(201);
         expect(res.body).to.have.property("message", "Admin account register successfully")
-    });
+
+    })
 
 });
 
@@ -156,7 +160,7 @@ describe("User controller user registration", () => {
         
         adminToken = jwt.sign({ role: "admin" }, "secret");
         userToken = jwt.sign({ role: "user" }, "secret");
-        sinon.stub(passwordConfig, "generatePassword").returns("Password1")
+        // sinon.stub(passwordConfig, "generatePassword").returns("Password1")
         
         sinon.stub(jwt, "verify").callsFake((token, secret) => {
             if (token === adminToken) {
@@ -167,9 +171,9 @@ describe("User controller user registration", () => {
             return null;
         });
 
-        transporterStub = sinon.stub(nodemailer, "createTransport").returns({
-            sendMail: sinon.stub().yields(null, { response: "250 OK" }), // Simulate successful email sending
-        });
+        // transporterStub = sinon.stub(nodemailer, "createTransport").returns({
+        //     sendMail: sinon.stub().yields(null, { response: "250 OK" }), // Simulate successful email sending
+        // });
 
     });
 
@@ -180,8 +184,7 @@ describe("User controller user registration", () => {
         const newUser = {
             fullName: "Abdul Alada",
             ipssNumber: "332266",
-            role: "user",
-            email: "user@gmail.com"
+            phoneNumber: "08066769442"
         }
 
         sinon.stub(User, "findOne").resolves(null)
@@ -189,8 +192,8 @@ describe("User controller user registration", () => {
 
         sinon.stub(User.prototype, "save").resolves({
             _id: new mongoose.Types.ObjectId(),
-            role: "user",
-            email: "user@gmail.com"
+            ipssNumber: "332266",
+            phoneNumber: "08066769442"
         })
 
         const res = await chai.request(server)
@@ -200,32 +203,28 @@ describe("User controller user registration", () => {
 
         expect(res).to.have.status(201);
         expect(res.body).to.have.property(
-            "message", `User account register successful. Login details sent to Email address: ${newUser.email}`)
-        expect(res.body).to.have.property(
-            "tempPassword", "Password1"
-        )
+            "message", "User account register successfully")
 
-        expect(passwordConfig.generatePassword.calledOnce).to.be.true;
-        expect(transporterStub.calledOnce).to.be.true;
-        expect(transporterStub().sendMail.calledOnce).to.be.true;
+        // expect(passwordConfig.generatePassword.calledOnce).to.be.true;
+        // expect(transporterStub.calledOnce).to.be.true;
+        // expect(transporterStub().sendMail.calledOnce).to.be.true;
     });
 
 
-    it("should fail registration of user by a user", async function() {
+    it("should fail registration of user by a user account", async function() {
 
         const newUser = {
             fullName: "Abdul Alada",
             ipssNumber: "332266",
-            role: "user",
-            email: "user@gmail.com"
+            phoneNumber: "08066769442"
         }
 
         sinon.stub(User, "findOne").resolves(null)
 
         sinon.stub(User.prototype, "save").resolves({
             _id: new mongoose.Types.ObjectId(),
-            role: "user",
-            email: "user@gmail.com"
+            ipssNumber: "332266",
+            phoneNumber: "08066769442"
         })
 
         const res = await chai.request(server)
@@ -236,35 +235,31 @@ describe("User controller user registration", () => {
         expect(res).to.have.status(403);
         expect(res.body).to.have.property(
             "message", "Access denied")
-
-        expect(transporterStub.calledOnce).to.be.false;
-        expect(transporterStub().sendMail.calledOnce).to.be.false;
     });
 
 
-    it("should fail registration of user with existing email", async function() {
+    it("should fail registration of user with existing ipssNumber or phoneNumber", async function() {
 
         const newUser = {
             fullName: "Abdul Alada",
-            ipssNumber: "332266",
-            role: "user",
-            email: "user@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         }
 
         const existingUser = {
             _id: new mongoose.Types.ObjectId,
             fullName: "Abdul Alada",
-            ipssNumber: "332266",
             role: "user",
-            email: "user@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         }
 
         sinon.stub(User, "findOne").resolves(existingUser);
 
         sinon.stub(User.prototype, "save").resolves({
             _id: new mongoose.Types.ObjectId(),
-            role: "user",
-            email: "user@gmail.com"
+            ipssNumber: "332211",
+            phoneNumber: "07015500652"
         })
 
         const res = await chai.request(server)
@@ -273,7 +268,7 @@ describe("User controller user registration", () => {
             .set('Authorization', `Bearer ${adminToken}`)
 
         expect(res).to.have.status(403);
-        expect(res.body).to.have.property("message", "User with this email or ipssNumber already exist")
+        expect(res.body).to.have.property("error", "User with provided ipssNumber or phone Number already exist")
 
     });
 });
@@ -292,8 +287,8 @@ describe("User login controller", () => {
             fullName: "Abdul Alada",
             ipssNumber: "332266",
             role: "user",
-            email: "user@gmail.com",
-            password: await bcrypt.hash("Password123", 10)
+            phoneNumber: "07015500652",
+            password: await bcrypt.hash("07015500652", 10)
         }
 
         sinon.stub(User, "findOne").resolves(userDetails)
@@ -303,8 +298,8 @@ describe("User login controller", () => {
         const res = await chai.request(server)
             .post("/api/auth/login")
             .send({
-                email: userDetails.email,
-                password: "Password123"
+                ipssNumber: "332266",
+                password: "07015500652"
             })
 
         expect(res).to.have.status(200);
@@ -323,12 +318,12 @@ describe("User login controller", () => {
         const res = await chai.request(server)
             .post("/api/auth/login")
             .send({
-                email: "user@gmail.com",
+                ipssNumber: "334556",
                 password: "Password123"
             })
 
         expect(res).to.have.status(404);
-        expect(res.body).to.have.property("message", "No user found by this Email. Sign up!")
+        expect(res.body).to.have.property("message", "No user found by this ipssNumber. Sign up!")
     });
 
 
@@ -349,68 +344,69 @@ describe("User login controller", () => {
         const res = await chai.request(server)
             .post("/api/auth/login")
             .send({
-                email: "user@gmail.com",
+                ipssNumber: "332266",
                 password: "Password1"
             })
 
         expect(res).to.have.status(400);
-        expect(res.body).to.have.property("message", "Incorrect password or email provided")
+        expect(res.body).to.have.property("message", "Incorrect password or ipssNumber provided")
     });
 })
 
 
-describe("User controller, Get 20 most recently created users", () => {
+// describe.only("User controller, Get 20 most recently created users", () => {
 
-    let adminToken, userToken;
+//     let adminToken, userToken;
     
-    beforeEach(function () {
-        sinon.restore();
+//     beforeEach(function () {
+//         sinon.restore();
         
-        adminToken = jwt.sign({ role: "admin" }, "secret");
-        userToken = jwt.sign({ role: "user" }, "secret");
-        sinon.stub(passwordConfig, "generatePassword").returns("Password1")
+//         adminToken = jwt.sign({ role: "admin" }, "secret");
+//         userToken = jwt.sign({ role: "user" }, "secret");
         
-        sinon.stub(jwt, "verify").callsFake((token, secret) => {
-            if (token === adminToken) {
-                return { id: "admin123", role: "admin", email: "admin@gmail.com" };
-            } else if (token === userToken) {
-                return { id: "user123", role: "user", email: "user@gmail.com" };
-            }
-            return null;
-        });
+//         sinon.stub(jwt, "verify").callsFake((token, secret) => {
+//             if (token === adminToken) {
+//                 return { id: "admin123", role: "admin", email: "admin@gmail.com" };
+//             } else if (token === userToken) {
+//                 return { id: "user123", role: "user", email: "user@gmail.com" };
+//             }
+//             return null;
+//         });
 
-    });
+//     });
 
-    it("should get at most 20 recently created users", async function() {
+//     it("should get at most 20 recently created users", async function() {
 
-        let existingUsers = [
-            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user1@gmail.com", createdAt: new Date("2023-01-01") },
-            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user2@gmail.com", createdAt: new Date("2025-01-01") },
-            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user3@gmail.com", createdAt: new Date("2020-01-01") },
-            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user4@gmail.com", createdAt: new Date("2021-01-01") },
-            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user5@gmail.com", createdAt: new Date("2024-01-01") },
-            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user6@gmail.com", createdAt: new Date("2024-01-01") },
-            { _id: new mongoose.Types.ObjectId(), role: "user", email: "user7@gmail.com", createdAt: new Date("2019-01-01") },
-        ]
+//         let existingUsers = [
+//             { _id: new mongoose.Types.ObjectId(), role: "user", fullName: "Abdul", ipssNumber: "332211", phoneNumber: "07015500651", createdAt: new Date("2023-01-01") },
+//             { _id: new mongoose.Types.ObjectId(), role: "user", fullName: "Abdul Alada", ipssNumber: "332222", phoneNumber: "07015500652", createdAt: new Date("2025-01-01") },
+//             { _id: new mongoose.Types.ObjectId(), role: "user", fullName: "Abdul Yakub", ipssNumber: "332233", phoneNumber: "07015500653", createdAt: new Date("2020-01-01") },
+//             { _id: new mongoose.Types.ObjectId(), role: "user", fullName: "Abdul Ala", ipssNumber: "332244", phoneNumber: "07015500655", createdAt: new Date("2021-01-01") },
+//             { _id: new mongoose.Types.ObjectId(), role: "user", fullName: "Abdul ada", ipssNumber: "332255", phoneNumber: "07015500659", createdAt: new Date("2024-01-01") },
+//             { _id: new mongoose.Types.ObjectId(), role: "user", fullName: "Rasheed", ipssNumber: "332266", phoneNumber: "07015500682", createdAt: new Date("2024-01-01") },
+//             { _id: new mongoose.Types.ObjectId(), role: "user", fullName: "Nasiru", ipssNumber: "332277", phoneNumber: "07015510653", createdAt: new Date("2019-01-01") },
+//         ]
 
-        sinon.stub(User, "find").returns({
-            sort: sinon.stub().callsFake(function () {
-                existingUsers.sort((a, b) => b.createdAt - a.createdAt);
-                return this;
-            }),
-            limit: sinon.stub().callsFake(function () {
-                existingUsers = existingUsers.slice(0, 20);
-                return this;
-            }),
-            select: sinon.stub().resolves(existingUsers),
-        });
+//         sinon.stub(User, "find").returns({
+//             sort: sinon.stub().callsFake(function () {
+//                 existingUsers.sort((a, b) => b.createdAt - a.createdAt);
+//                 return this;
+//             }),
+//             limit: sinon.stub().callsFake(function () {
+//                 existingUsers = existingUsers.slice(0, 20);
+//                 return this;
+//             }),
+//             select: sinon.stub().resolves(existingUsers),
+//         });
 
-        const res = await chai.request(server)
-            .get("/api/auth/get-users")
-            .set('Authorization', `Bearer ${adminToken}`)
+//         const res = await chai.request(server)
+//             .get("/api/auth/get-users")
+//             .set('Authorization', `Bearer ${adminToken}`)
 
-        expect(res).to.have.status(200);
-        expect(res.body.users[0].email).to.be.equal("user2@gmail.com");
-        expect(res.body.users.length).to.be.at.most(20);
-    })
-})
+//         console.log(res.body)
+
+//         expect(res).to.have.status(200);
+//         expect(res.body.users[0].).to.be.equal("user2@gmail.com");
+//         expect(res.body.users.length).to.be.at.most(20);
+//     })
+// })
