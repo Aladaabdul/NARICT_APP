@@ -25,7 +25,9 @@ const calculateLoanInterest = function(amount, term_month) {
 
     const interestAmount = (totalInterest / 100) * amount
 
-    const repaymentAmount = amount + interestAmount + SERVICE_CHARGE
+    const totalInterestAmount = interestAmount + SERVICE_CHARGE
+
+    const repaymentAmount = amount
 
     const fixedInstallment = Math.floor(repaymentAmount / term_month)
 
@@ -43,6 +45,7 @@ const calculateLoanInterest = function(amount, term_month) {
     return {
         totalInterest,
         interestAmount,
+        totalInterestAmount,
         repaymentAmount,
         recurringFee: fixedInstallment,
         finalPayment,

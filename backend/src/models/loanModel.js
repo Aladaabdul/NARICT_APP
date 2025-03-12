@@ -34,8 +34,8 @@ const loanModelSchema = new Schema({
 
     status: {
         type: String,
-        enum: ["active", "paid"],
-        default: "active"
+        enum: ["pending", "rejected", "approved", "completed"],
+        default: "pending"
     },
 
     totalInterest: {
@@ -44,6 +44,11 @@ const loanModelSchema = new Schema({
     },
 
     interestAmount: {
+        type: Number,
+        required: true
+    },
+
+    totalInterestAmount: {
         type: Number,
         required: true
     },

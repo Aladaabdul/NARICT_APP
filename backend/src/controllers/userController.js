@@ -1,4 +1,6 @@
 const userModel = require("../models/userModel");
+const savingModel = require("../models/savingModel");
+const loanModel = require("../models/loanModel");
 const bcrypt = require("bcryptjs");
 require("dotenv").config();
 const uuid = require("uuid")
@@ -18,32 +20,36 @@ const registerAdmin = async function (req, res) {
     if (valid.error) return res.status(400).json({
         error: valid.error.details.map(detail => detail.message)})
 
-    const { fullName, email, password } = req.body;
+    const { fullName, ipssNumber, phoneNumber } = req.body;
 
     const MAX_ADMINS = process.env.MAX_ADMINS || 3
 
     try {
         
-        const existingAdmin = await userModel.find({
-            $or: [{role: "admin"}, {email}]})
+        const existingUser = await userModel.findOne({
+            $or: [{ipssNumber}, {phoneNumber}]
+        })
+
+        if (existingUser) {
+            return res.status(403).json({error: "User with provided ipssNumber or phone Number already exist"})
+        }
+        
+        const existingAdmin = await userModel.find({role: "admin"});
 
         const adminCount = existingAdmin.filter(admin => admin.role === 'admin').length
-        
-        if (existingAdmin.some(admin => admin.email === email)) {
-            return res.status(403).json({error: "Email already registered. Login Instead"})
-        }
         
         if (adminCount >= MAX_ADMINS) {
 
             return res.status(403).json({message: `Admin account can't exceed ${MAX_ADMINS}`})
         }
 
-        const hashedpassword = await bcrypt.hash(password, 10)
+        const hashedpassword = await bcrypt.hash(phoneNumber, 10)
 
         const user = new userModel({
             fullName,
             role: "admin",
-            email,
+            ipssNumber,
+            phoneNumber,
             password: hashedpassword
         })
 
@@ -51,9 +57,6 @@ const registerAdmin = async function (req, res) {
 
         return res.status(201).json({message: "Admin account register successfully"})
     } catch (error) {
-        // if (error.code === 11000) {
-        //     return res.status(400).json({ error: "Duplicate entry detected." });
-        // }
         console.log(error)
         return res.status(500).json({error: "Admin resgistration unsuccessful"})
     }
@@ -67,87 +70,40 @@ const registerUser = async function (req, res) {
 
     const valid = validation.ValidateUserData(req.body, "user")
 
-    if (valid.error) return res.status(400).json({
-        error: valid.error.details.map(detail => detail.message)})
-
-    const { fullName, ipssNumber, email } = req.body
-
     if (req.user.role !== 'admin') {
         return res.status(403).json({message: 'Access denied'});
     }
 
+    if (valid.error) return res.status(400).json({
+        error: valid.error.details.map(detail => detail.message)})
+
+    const { fullName, ipssNumber, phoneNumber } = req.body
+
     try {
 
-        const query = {
-            $or: [{ email }]
-        };
-        
-        // Only add ipssNumber check if it exists in the request
-        if (req.body.ipssNumber) {
-            query.$or.push({ ipssNumber: req.body.ipssNumber });
-        }
-        
-        const existingUser = await userModel.findOne(query);
+        const existingUser = await userModel.findOne({
+            $or: [{ipssNumber}, {phoneNumber}]
+        })
 
         if (existingUser) {
-            return res.status(403).json({message: "User with this email or ipssNumber already exist"})
+            return res.status(403).json({error: "User with provided ipssNumber or phone Number already exist"})
         }
 
-        const tempPassword = passwordConfig.generatePassword();
+        // const tempPassword = passwordConfig.generatePassword();
 
-        const hashedpassword = await bcrypt.hash(tempPassword, 10)
+        const hashedpassword = await bcrypt.hash(phoneNumber, 10)
 
         const user = new userModel({
             fullName,
             ipssNumber,
             role: "user",
-            email,
+            phoneNumber,
             password: hashedpassword
         })
 
-        
-        // Sending User Login details Logic
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL,
-                pass:process.env.PASSWORD
-                
-            }
-        })
-        
-        const mailOptions = {
-            from: process.env.EMAIL,
-            to: email,
-            subject: 'LOGIN DETAILS',
-            html: `
-            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h2>Login details</h2>
-            <p>Hello, ${fullName}</p>
-            <p>Your Login Details are:</p>
-            <p>Email: ${email}</p>
-            <p>Password: ${tempPassword}</p>
-            <p>Login Into The Website To Change Your Password</p>
-            <p>Thank you,<br>NARICT SAVINGS AND LOAN SCHEME</p>
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0;">
-            </div>
-            `
-        }
-        
-        transporter.sendMail(mailOptions, async (error, info) => {
-            if (error) {
-                console.log(error);
-                return res.status(500).json({ message: "Failed to send user login details" });
-            }
-        
-            await user.save();
+        await user.save();
 
-            return res.status(201).json({
-            message: `User account register successful. Login details sent to Email address: ${email}`,
-            tempPassword: tempPassword
-        });
-
-    })
+        return res.status(201).json({message: "User account register successfully"})
 
     } catch (error) {
         console.log(error)
@@ -164,17 +120,17 @@ const loginUser = async function (req, res) {
     if (valid.error) return res.status(400).json({
         error: valid.error.details.map(detail => detail.message)})
     
-    const { password, email } = req.body
+    const { password, ipssNumber } = req.body
 
     try {
 
-        const existingUser = await userModel.findOne({email})
+        const existingUser = await userModel.findOne({ ipssNumber })
 
-        if (!existingUser) return res.status(404).json({message: "No user found by this Email. Sign up!"})
+        if (!existingUser) return res.status(404).json({message: "No user found by this ipssNumber. Sign up!"})
 
         const comparePassword =  await bcrypt.compare(password, existingUser.password)
 
-        if (!comparePassword) return res.status(400).json({message: "Incorrect password or email provided"})
+        if (!comparePassword) return res.status(400).json({message: "Incorrect password or ipssNumber provided"})
 
         const token = jwt.sign({id: existingUser.id, role: existingUser.role, email: existingUser.email}, secretKey, {expiresIn: '1hr'})
 
@@ -192,7 +148,7 @@ const loginUser = async function (req, res) {
 }
 
 
-// Change password function
+// Change password by user function
 const changePassword = async function (req, res) {
 
     const valid = validation.ValidateChangePassword(req.body)
@@ -233,81 +189,121 @@ const changePassword = async function (req, res) {
     }
 }
 
+// Commented out to allow admin to reset users password
 
-// Forgot password function
-const forgotPassword = async function (req, res) {
+// // Forgot password function
+// const forgotPassword = async function (req, res) {
 
-    const valid = validation.ValidateForgotPassword(req.body)
+//     const valid = validation.ValidateForgotPassword(req.body)
 
-    if (valid.error) return res.status(400).json({
-        error: valid.error.details.map(detail => detail.message)
-    })
+//     if (valid.error) return res.status(400).json({
+//         error: valid.error.details.map(detail => detail.message)
+//     })
 
-    const { email } = req.body;
+//     const { email } = req.body;
 
-    try{
+//     try{
 
-        const existingUser = await userModel.findOne({email})
+//         const existingUser = await userModel.findOne({email})
 
-        if (!existingUser) {
-            return res.status(404).json({error: "No user found by this email"})
-        }
+//         if (!existingUser) {
+//             return res.status(404).json({error: "No user found by this email"})
+//         }
 
         
-        if (existingUser) {
-            const token = uuid.v4();
-            existingUser.resetToken = token;
-            existingUser.resetTokenExpires = Date.now() + 3600000;
+//         if (existingUser) {
+//             const token = uuid.v4();
+//             existingUser.resetToken = token;
+//             existingUser.resetTokenExpires = Date.now() + 3600000;
 
-            const transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: process.env.EMAIL,
-                    pass:process.env.PASSWORD
+//             const transporter = nodemailer.createTransport({
+//                 service: 'gmail',
+//                 auth: {
+//                     user: process.env.EMAIL,
+//                     pass:process.env.PASSWORD
 
-                }
-            })
+//                 }
+//             })
 
-            const mailOptions = {
-                from: process.env.EMAIL,
-                to: existingUser.email,
-                subject: `${existingUser.fullName}, Reset Your Password for Your Account`,
-                html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                  <h2>Password Reset </h2>
-                  <p>Hello, ${existingUser.fullName}</p>
-                  <p>You have requested to reset your password. Click on the button below to proceed:</p>
-                  <a href="http://localhost:3000/reset-password?token=${token}" 
-                     style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007BFF; text-decoration: none; border-radius: 5px;">
-                     Reset Password
-                  </a>
-                  <p>If you did not request a password reset, please ignore this email.</p>
-                  <p>Thank you,<br>NARICT SAVINGS AND LOAN SCHEME</p>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0;">
-                </div>
-            `
-            };
+//             const mailOptions = {
+//                 from: process.env.EMAIL,
+//                 to: existingUser.email,
+//                 subject: `${existingUser.fullName}, Reset Your Password for Your Account`,
+//                 html: `
+//                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+//                   <h2>Password Reset </h2>
+//                   <p>Hello, ${existingUser.fullName}</p>
+//                   <p>You have requested to reset your password. Click on the button below to proceed:</p>
+//                   <a href="http://localhost:3000/reset-password?token=${token}" 
+//                      style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007BFF; text-decoration: none; border-radius: 5px;">
+//                      Reset Password
+//                   </a>
+//                   <p>If you did not request a password reset, please ignore this email.</p>
+//                   <p>Thank you,<br>NARICT SAVINGS AND LOAN SCHEME</p>
+//                 <hr style="border: 0; border-top: 1px solid #eee; margin: 40px 0;">
+//                 </div>
+//             `
+//             };
 
-            transporter.sendMail(mailOptions,  async (error, info) => {
-                if (error) {
-                    console.log(error);
-                    return res.status(500).json({ message: "Failed to send password reset email" });
-                }
+//             transporter.sendMail(mailOptions,  async (error, info) => {
+//                 if (error) {
+//                     console.log(error);
+//                     return res.status(500).json({ message: "Failed to send password reset email" });
+//                 }
 
-                await existingUser.save()
+//                 await existingUser.save()
 
-                return res.status(200).json({ message: 'Password reset email sent successfully' });
-            });
-        }
+//                 return res.status(200).json({ message: 'Password reset email sent successfully' });
+//             });
+//         }
 
-    } catch (error) {
-        console.log(error)
-    }
-}
+//     } catch (error) {
+//         console.log(error)
+//     }
+// }
 
 
-// Reset password function
+// // Reset password function
+// const resetPassword = async function (req, res) {
+
+//     const valid = validation.ValidateResetData(req.body);
+
+//     if (valid.error) return res.status(400).json({
+//         error: valid.error.details.map(detail => detail.message)
+//     })
+
+//     const { token, newPassword} = req.body;
+
+//     try {
+
+//         const existingUser = await userModel.findOne({
+//             resetToken: token,
+//             resetTokenExpires: { $gt: Date.now() }
+//         })
+
+//         if (!existingUser) return res.status(400).json({error: "Invalid or expired token"})
+
+//         const hashedpassword = await bcrypt.hash(newPassword, 10)
+//         existingUser.password = hashedpassword
+//         existingUser.resetToken = undefined
+//         existingUser.resetTokenExpires = undefined
+
+//         await existingUser.save()
+
+//         return res.status(200).json({message: "Password changed successfully"})
+
+//     } catch (error) {
+//         console.log(error)
+//     }
+// }
+
+
+// Reset user password by an Admin function
 const resetPassword = async function (req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied!"})
+    }
 
     const valid = validation.ValidateResetData(req.body);
 
@@ -315,28 +311,26 @@ const resetPassword = async function (req, res) {
         error: valid.error.details.map(detail => detail.message)
     })
 
-    const { token, newPassword} = req.body;
+    const { ipssNumber, newPassword } = req.body;
 
     try {
 
-        const existingUser = await userModel.findOne({
-            resetToken: token,
-            resetTokenExpires: { $gt: Date.now() }
-        })
+        const existingUser = await userModel.findOne({ ipssNumber })
 
-        if (!existingUser) return res.status(400).json({error: "Invalid or expired token"})
+        if (!existingUser) {
+            return res.status(404).json({message: "No user found with this ipssNumber"})
+        }
 
-        const hashedpassword = await bcrypt.hash(newPassword, 10)
-        existingUser.password = hashedpassword
-        existingUser.resetToken = undefined
-        existingUser.resetTokenExpires = undefined
+        const hashedpassword = await bcrypt.hash(newPassword, 10);
+        existingUser.password = hashedpassword;
 
         await existingUser.save()
 
-        return res.status(200).json({message: "Password changed successfully"})
+        return res.status(200).json({message: "User password reset successful"})
 
     } catch (error) {
         console.log(error)
+        return res.status(500).json({message: "Unable to reset user password"})
     }
 }
 
@@ -348,14 +342,13 @@ const searchUser =  async function (req, res) {
         return res.status(403).json({error: "Access denied!"})
     }
 
-    const { fullName, ipssNumber, email } = req.query;
+    const { fullName, ipssNumber} = req.query;
 
     try {
 
         const filter = {};
 
         if (ipssNumber) filter.ipssNumber = ipssNumber;
-        if (email) filter.email = email;
         if (fullName) filter.fullName = { $regex: fullName, $options: "i" };
 
         const user = await userModel
@@ -363,8 +356,21 @@ const searchUser =  async function (req, res) {
             .select("-password -resetToken -resetTokenExpires")
 
         if (!user) return res.status(404).json({error: "No user found"})
+
+        const [saving, activeLoan] = await Promise.all([
+            savingModel.findOne(
+                { userId: user._id },
+                { transaction: { $slice: -1 }, totalAmount: 1 }
+            ),
+            loanModel.findOne({ userId: user._id, status: "approved" })
+        ]);
         
-        return res.status(200).json({user: user})
+        return res.status(200).json({
+        user: user,
+        totalSaving: saving ? saving.totalAmount : 0,
+        LastSavingTransaction: saving ? saving.transaction : [],
+        approvedLoan: activeLoan || null
+    });
 
     } catch (error) {
         console.log(error)
@@ -373,6 +379,7 @@ const searchUser =  async function (req, res) {
 };
 
 
+// Get list of users details 
 const getUsers = async function (req, res) {
 
     if (req.user.role !== "admin") {
@@ -385,17 +392,76 @@ const getUsers = async function (req, res) {
             .find({role: { $ne: "admin"} })
             .sort({ createdAt: -1 })
             .limit(20)
-            .select("-password -resetToken -resetTokenExpires -role")
+            .select("-password -resetToken -resetTokenExpires")
 
         if (!users || users.length === 0) {
             return res.status(404).json({message: "No user found"})
         }
 
-        return res.status(200).json({users: users})
+         // Fetch total savings and active loans for each user in parallel
+         const userDetails = await Promise.all(
+            users.map(async (user) => {
+                const [saving, activeLoan] = await Promise.all([
+                    savingModel.findOne(
+                        { userId: user._id },
+                        { transaction: { $slice: -1 }, totalAmount: 1 }
+                    ),
+                    loanModel.findOne({ userId: user._id, status: "approved" })
+                ]);
+
+                return {
+                    ...user.toObject(), // Convert Mongoose document to plain object
+                    totalSaving: saving ? saving.totalAmount : 0,
+                    lastSavingTransaction: saving ? saving.transaction : [],
+                    approvedLoan: activeLoan || null,
+                };
+            })
+        );
+
+        return res.status(200).json({users: userDetails})
 
     } catch (error) {
         console.log(error)
         return res.status(500).json({error: "Unable to get users"})
+    }
+}
+
+
+// Get user info using ipssNumber
+const getUserInfo = async function (req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied!"})
+    }
+
+    const { ipssNumber } = req.body
+
+    try {
+
+        const user = await userModel
+            .findOne({ ipssNumber })
+            .select("-password -resetToken -resetTokenExpires")
+
+        if (!user) return res.status(404).json({error: "No user found"})
+
+        const [saving, activeLoan] = await Promise.all([
+            savingModel.findOne(
+                { userId: user._id },
+                { transaction: { $slice: -1 }, totalAmount: 1 }
+            ),
+            loanModel.findOne({ userId: user._id, status: "approved" })
+        ]);
+        
+        return res.status(200).json({
+        user: user,
+        totalSaving: saving ? saving.totalAmount : 0,
+        lastSavingTransaction: saving ? saving.transaction : [],
+        approvedLoan: activeLoan || null
+    });
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({error: "Unable to get user"})
     }
 }
 
@@ -406,8 +472,8 @@ module.exports = {
     registerUser,
     loginUser,
     changePassword,
-    forgotPassword,
     resetPassword,
     searchUser,
-    getUsers
+    getUsers,
+    getUserInfo
 }

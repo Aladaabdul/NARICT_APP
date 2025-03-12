@@ -15,28 +15,41 @@ const userModelSchema = new Schema({
         default: "user"
     },
 
+    // ipssNumber: {
+    //     type: Number,
+    //     unique: true,
+    //     min: 10000,
+    //     max: 999999,
+    //     required: function () {
+    //         return this.role === "user";
+    //     },
+    //     validate: {
+    //         validator: function (value) {
+    //             if (this.role === "user" && !value) {
+    //                 return false; // If role is user, ipssNumber must be present
+    //             }
+    //             return true; // Otherwise, it's fine
+    //         },
+    //         message: "IpssNumber is required for users",
+    //     },
+    // },
+
     ipssNumber: {
         type: Number,
         unique: true,
         min: 10000,
         max: 999999,
-        required: function () {
-            return this.role === "user";
-        },
-        validate: {
-            validator: function (value) {
-                if (this.role === "user" && !value) {
-                    return false; // If role is user, ipssNumber must be present
-                }
-                return true; // Otherwise, it's fine
-            },
-            message: "IpssNumber is required for users",
-        },
+        required: true
+    },
+
+    phoneNumber: {
+        type: Number,
+        unique: true,
+        required: true
     },
 
     email: {
         type: String,
-        required: true,
         unique: true
     },
 
