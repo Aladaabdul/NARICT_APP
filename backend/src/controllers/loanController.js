@@ -406,11 +406,14 @@ const checkMonthlyInstallment = async function (req, res) {
         const today = new Date();
         const loanStartDate = new Date(loan.createdAt)
 
+        const dayOfMonth = today.getDate();
+        const createdDay = loanStartDate.getDate();
+
         const monthsPassed = 
             (today.getFullYear() - loanStartDate.getFullYear()) * 12 + 
             (today.getMonth() - loanStartDate.getMonth())
 
-        if (monthsPassed < 1) continue
+        if (monthsPassed < 1 || dayOfMonth < createdDay) continue
 
         loan.monthlyInstallment.sort((a,b) => a.month - b.month)
 
