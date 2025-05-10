@@ -421,13 +421,14 @@ const checkMonthlyInstallment = async function (req, res) {
             (inst) => inst.month === monthsPassed
         )
 
-        if (currentInstallment && !currentInstallment.paid) {
+        if (currentInstallment && !currentInstallment.paid && !currentInstallment.penaltyApplied) {
 
             const penalty = loan.recurringFee * 0.05
             const lastIndex = loan.monthlyInstallment.length - 1
             loan.monthlyInstallment[lastIndex].amount += penalty
             loan.totalInterestAmount += penalty
             loan.repaymentAmount += penalty
+            currentInstallment.penaltyApplied = true;
     
             await loan.save();
             updatedLoans.push({
