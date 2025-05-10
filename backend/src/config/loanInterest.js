@@ -36,11 +36,12 @@ const calculateLoanInterest = function(amount, term_month) {
     let installments = Array(term_month - 1).fill().map((_, i) => ({
         month: i + 1,
         amount: fixedInstallment,
-        paid: false
+        paid: false,
+        penaltyApplied: false
     }));
 
 
-    installments.push({ month: term_month, amount: finalPayment, paid: false });
+    installments.push({ month: term_month, amount: finalPayment, paid: false, penaltyApplied: false });
 
     return {
         totalInterest,
