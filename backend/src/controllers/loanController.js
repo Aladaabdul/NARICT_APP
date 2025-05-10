@@ -427,6 +427,7 @@ const checkMonthlyInstallment = async function (req, res) {
             const lastIndex = loan.monthlyInstallment.length - 1
             loan.monthlyInstallment[lastIndex].amount += penalty
             loan.totalInterestAmount += penalty
+            loan.finalPayment += penalty
             loan.repaymentAmount += penalty
             currentInstallment.penaltyApplied = true;
     
