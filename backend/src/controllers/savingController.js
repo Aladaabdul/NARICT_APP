@@ -215,6 +215,18 @@ const getAllSavings = async function(req, res) {
 
             { $sort: { lastUpdated: -1 } },
             { $limit: 20 },
+
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+
+            { $unwind: "$user" },
+            
             {
                 $addFields: {
                     latestTransaction: { $arrayElemAt: [{ $sortArray: { input: "$transaction", sortBy: { date: -1 } } }, 0] }
@@ -225,6 +237,7 @@ const getAllSavings = async function(req, res) {
                 $project: {
                     _id: 1,
                     ipssNumber: 1,
+                    "user.fullName": 1,
                     lastUpdated: 1,
                     totalAmount: 1,
                     userId: 1,
