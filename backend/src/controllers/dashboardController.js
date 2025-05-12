@@ -33,6 +33,7 @@ const userDashboard = async function (req, res) {
             LastSavingTransaction: saving ? saving.transaction : [],
             approvedLoanBalance: activeLoan ? activeLoan.repaymentAmount : 0,
             approvedLoanRecurringFee: activeLoan ? activeLoan.recurringFee: 0,
+            approvedLoanFinalPayment: activeLoan ? activeLoan.finalPayment: 0,
             approvedLoanUnpaidMonths: unpaidMonths
         });
 
