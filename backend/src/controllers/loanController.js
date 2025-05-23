@@ -191,7 +191,9 @@ const getLoansByStatus = async function (req, res) {
 
     try {
 
-        const Loans = await loanModel.find({ status: status });
+        const Loans = await loanModel
+            .find({ status: status })
+            .sort({ createdAt: -1 })
 
         if (!Loans || Loans.length === 0) {
             return res.status(404).json({message: `No ${status} loans found`})
