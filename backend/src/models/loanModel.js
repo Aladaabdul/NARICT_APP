@@ -73,9 +73,16 @@ const loanModelSchema = new Schema({
             month: {type: Number, required: true},
             amount: {type: Number, required: true},
             paid: {type: Boolean, required: true},
-            penaltyApplied: {type: Boolean, required: true}
+            paidAt: {type: Date, default: null},
+            penaltyApplied: {type: Boolean, required: true},
+            penaltyAppliedAt: {type: Date, default: null}
         }
     ],
+
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    },
 
     createdAt: {
         type: Date,

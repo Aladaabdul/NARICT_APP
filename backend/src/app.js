@@ -5,11 +5,13 @@ const yaml = require("js-yaml")
 const fs = require("fs")
 const path = require("path")
 const cors = require("cors")
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 const { ConnectTOMongo } = require("./config/db")
 const userRouter = require("./routes/userRoute")
 const savingRouter = require("./routes/savingRoute")
 const loanRouter = require("./routes/loanRoute")
-const dashboardRouter = require("./routes/dashboardRoute")
+const dashboardRouter = require("./routes/dashboardRoute");
 
 const app = express()
 const PORT = 8000 || process.env.PORT
@@ -18,7 +20,10 @@ ConnectTOMongo();
 
 app.use(express.json())
 
-app.use(cors());
+app.use(cors({ origin: "*" }));
+
+//enable helmet
+app.use(helmet())
 
 // CDN CSS
 const CSS_URL = "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.3.0/swagger-ui.min.css";
@@ -38,6 +43,15 @@ app.use(
       customCssUrl: CSS_URL,
     }),
   );
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: "Too many requests from this IP, please try again later"
+});
+
+//apply rate limiting to all routes
+app.use(apiLimiter)
 
 
 app.use('/api/auth', userRouter);
