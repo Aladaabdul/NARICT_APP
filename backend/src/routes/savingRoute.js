@@ -11,6 +11,7 @@ savingRouter.get('/transactions', authenticateUser, savingController.getTransact
 savingRouter.get('/user-saving', authenticateUser, savingController.getSaving);
 savingRouter.post('/userSaving', authenticateUser, savingController.getUserSaving);
 savingRouter.get('/get-savings', authenticateUser, savingController.getAllSavings);
+savingRouter.get('/saving-stats', authenticateUser, savingController.getSavingStats);
 
 
 module.exports = savingRouter;

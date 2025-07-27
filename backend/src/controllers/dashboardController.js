@@ -1,6 +1,7 @@
 const userModel = require("../models/userModel");
 const loanModel = require("../models/loanModel");
 const savingModel = require("../models/savingModel");
+const { sendGeneralStatsXlsxFile } = require("../config/fileResponse");
 
 
 
@@ -125,8 +126,158 @@ const adminDashboard = async function (req, res) {
 }
 
 
+const generalStats = async function (req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied!"})
+    }
+
+    try {
+
+        const now = new Date();
+
+        const { range } = req.query; // e.g. "today", "week", "month"
+
+        let startDate, endDate;
+
+        switch (range) {
+
+        case "today":
+            startDate = new Date(); startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
+            break;
+
+        case "week":
+            startDate = new Date(now); startDate.setDate(now.getDate() - now.getDay());
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+
+        case "month":
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+
+        default:
+            startDate = null; endDate = null;
+        }
+
+        const matchStage = {};
+        if (startDate && endDate) {
+            matchStage.updatedAt = { $gte: startDate, $lte: endDate };
+        }
+
+        const [users, savings, loans] = await Promise.all([
+
+            userModel.aggregate([
+
+                { 
+                    $match: {
+                        ...matchStage,
+                        role: { $ne: "admin" }
+                    }
+                },
+                { $sort: { createdAt: -1 } },
+
+                {
+                    $project: {
+                        fullName: 1,
+                        role: 1,
+                        ipssNumber: 1,
+                        phoneNumber: 1,
+                        email: 1,
+                        createdAt: 1
+                    }
+                }
+            ]),
+            savingModel.aggregate([
+
+                { $match: matchStage },
+                { $sort: { lastUpdated: -1 } },
+
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "userId",
+                        foreignField: "_id",
+                        as: "user"
+                    }
+                },
+
+                { $unwind: "$user" },
+                
+                {
+                    $project: {
+                        _id: 1,
+                        ipssNumber: 1,
+                        "user.fullName": 1,
+                        lastUpdated: 1,
+                        totalAmount: 1,
+                        userId: 1,
+                        transaction: 1
+                    }
+                }
+            ]),
+            loanModel.aggregate([
+            
+                { $match: matchStage },
+                { $sort: { updatedAt: -1 } },       
+            
+                {
+                    $project: {
+                        _id: 1,
+                        createdAt: 1,
+                        ipssNumber: 1,
+                        fullName: 1,
+                        amount: 1,
+                        term_month: 1,
+                        status: 1,
+                        totalInterestAmount: 1,
+                        repaymentAmount: 1,
+                        updatedAt: 1,
+                        recurringFee: 1,
+                        finalPayment: 1
+                    }
+                }
+            ])
+        ])
+
+        const totalUsers = users.length;
+
+        const totalSavingsAmount = savings.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+
+        const activeLoansCount = loans.filter(l => l.status === "approved").length;
+
+        const completedLoansCount = loans.filter(l => l.status === "completed").length;
+
+        summary = {
+            totalUsers,
+            totalSavingsAmount,
+            activeLoansCount,
+            completedLoansCount
+        }
+
+        const baseName = `general_stats_${now.toISOString().slice(0,10)}`
+
+        return await sendGeneralStatsXlsxFile(res, {
+            summary,
+            users,
+            savings,
+            loans
+        }, baseName);
+
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json({ message: "Unable get general stats" })
+    }
+}
+
+
 module.exports = {
 
     userDashboard,
-    adminDashboard
+    adminDashboard,
+    generalStats
 }

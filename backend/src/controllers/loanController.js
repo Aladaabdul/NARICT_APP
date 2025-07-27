@@ -2,6 +2,7 @@ const loanModel = require("../models/loanModel");
 const userModel = require("../models/userModel");
 const { calculateLoanInterest } = require("../config/loanInterest");
 const validation = require("../config/validations");
+const { sendLoanXlsxFile } = require("../config/fileResponse");
 
 
 
@@ -101,6 +102,7 @@ const createLoan = async function (req, res) {
         if (approvedLoan) {
             totalAmount += approvedLoan.repaymentAmount;
             approvedLoan.monthlyInstallment.forEach(installment => installment.paid = true)
+            approvedLoan.monthlyInstallment.forEach(installment => installment.paidAt = Date.now())
             approvedLoan.status = "completed"
             await approvedLoan.save();
             loanStatus = "approved";
@@ -154,7 +156,7 @@ const updateLoanStatus = async function (req, res) {
 
         const userPendingLoan = await loanModel.findOneAndUpdate(
             { ipssNumber, status: "pending" },
-            { status: status },
+            { status: status, updatedAt: Date.now() },
             { new: true }
         )
 
@@ -193,7 +195,7 @@ const getLoansByStatus = async function (req, res) {
 
         const Loans = await loanModel
             .find({ status: status })
-            .sort({ createdAt: -1 })
+            .sort({ updatedAt: -1 })
 
         if (!Loans || Loans.length === 0) {
             return res.status(404).json({message: `No ${status} loans found`})
@@ -369,6 +371,7 @@ const loanRepayment = async function (req, res) {
             if (remainingPayment >= installment.amount) {
                 remainingPayment -= installment.amount
                 installment.paid = true;
+                installment.paidAt = Date.now()
             }
             else {
                 installment.amount -= remainingPayment;
@@ -381,6 +384,8 @@ const loanRepayment = async function (req, res) {
             loan.repaymentAmount = 0;
             loan.status = "completed"
         }
+        
+        loan.updatedAt = Date.now()
 
         await loan.save();
 
@@ -432,6 +437,8 @@ const checkMonthlyInstallment = async function (req, res) {
             loan.finalPayment += penalty
             loan.repaymentAmount += penalty
             currentInstallment.penaltyApplied = true;
+            currentInstallment.penaltyAppliedAt = Date.now()
+            loan.updatedAt = Date.now();
     
             await loan.save();
             updatedLoans.push({
@@ -448,6 +455,89 @@ const checkMonthlyInstallment = async function (req, res) {
 
 
 
+const getLoanStats = async function(req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied"})
+    }
+
+    try {
+
+        const now = new Date();
+
+        const { range } = req.query; // e.g. "today", "week", "month"
+
+        let startDate, endDate;
+
+        switch (range) {
+
+        case "today":
+            startDate = new Date(); startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
+            break;
+
+        case "week":
+            startDate = new Date(now); startDate.setDate(now.getDate() - now.getDay());
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+
+        case "month":
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+
+        default:
+            startDate = null; endDate = null;
+        }
+
+        const matchStage = {};
+        if (startDate && endDate) {
+            matchStage.updatedAt = { $gte: startDate, $lte: endDate };
+        }
+
+        const loans = await loanModel.aggregate([
+
+            { $match: matchStage },
+            { $sort: { updatedAt: -1 } },
+            
+
+            {
+                $project: {
+                    _id: 1,
+                    createdAt: 1,
+                    ipssNumber: 1,
+                    fullName: 1,
+                    amount: 1,
+                    term_month: 1,
+                    status: 1,
+                    totalInterestAmount: 1,
+                    repaymentAmount: 1,
+                    updatedAt: 1,
+                    recurringFee: 1,
+                    finalPayment: 1
+                }
+            }
+        ]);
+
+        if (!loans || loans.length === 0) {
+            return res.status(404).json({message: "No loan found"})
+        }
+
+        const baseName = `loans_stats_${now.toISOString().slice(0,10)}`
+
+        return await sendLoanXlsxFile(res, loans, baseName);
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({message: "Unable to get loans stats"})
+    }
+}
+
+
+
 
 module.exports = {
     calculateLoanTerms,
@@ -458,6 +548,7 @@ module.exports = {
     loanRepayment,
     checkMonthlyInstallment,
     updateLoanStatus,
-    getLoansByStatus
+    getLoansByStatus,
+    getLoanStats
 }
 

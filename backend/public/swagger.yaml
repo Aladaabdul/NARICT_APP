@@ -372,6 +372,18 @@ paths:
           description: Internal Server Error
 
   
+  /saving/saving-stats:
+    get:
+      summary: Download savings stats in an excel sheet (The endpoint can be query with (today, week, month))
+      security:
+        - bearerAuth: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successful
+
+  
   /loan/loan-terms:
     post:
       summary: Endpoint to view loan terms before calling the create-loan endpoint
@@ -597,6 +609,18 @@ paths:
         '500':
           description: Internal Server Error
 
+  
+  /loan/loan-stats:
+    get:
+      summary: Download loan stats in an excel sheet (The endpoint can be query with (today, week, month))
+      security:
+        - bearerAuth: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successful
+
 
   /dashboard/user:
     get:
@@ -632,6 +656,18 @@ paths:
           description: Unauthorized - Invalid credentials
         '500':
           description: Internal Server Error
+
+
+  /dashboard/general-stats:
+    get:
+      summary: Download general stats in an excel sheet (The endpoint can be query with (today, week, month))
+      security:
+        - bearerAuth: []
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successful
 
 
 components:

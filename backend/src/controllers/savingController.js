@@ -1,6 +1,7 @@
 const savingModel = require("../models/savingModel");
 const userModel = require("../models/userModel");
 const validation = require("../config/validations");
+const { savingSendXlsxFile } = require("../config/fileResponse")
 
 
 
@@ -202,7 +203,7 @@ const getUserSaving = async function(req, res) {
 }
 
 
-// Get 20 recently created savings
+// Get 20 recently updated savings
 const getAllSavings = async function(req, res) {
 
     if (req.user.role !== "admin") {
@@ -259,6 +260,100 @@ const getAllSavings = async function(req, res) {
 }
 
 
+const getSavingStats = async function(req, res) {
+
+    if (req.user.role !== "admin") {
+        return res.status(403).json({error: "Access denied"})
+    }
+
+    try {
+
+        const now = new Date();
+
+        const { range } = req.query; // e.g. "today", "week", "month"
+
+        let startDate, endDate;
+
+        switch (range) {
+
+        case "today":
+            startDate = new Date(); startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(); endDate.setHours(23, 59, 59, 999);
+            break;
+
+        case "week":
+            startDate = new Date(now); startDate.setDate(now.getDate() - now.getDay());
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+
+        case "month":
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            endDate.setHours(23, 59, 59, 999);
+            break;
+
+        default:
+            startDate = null; endDate = null;
+        }
+
+        const matchStage = {};
+        if (startDate && endDate) {
+            matchStage.lastUpdated = { $gte: startDate, $lte: endDate };
+        }
+
+        const savings = await savingModel.aggregate([
+
+            { $match: matchStage },
+            { $sort: { lastUpdated: -1 } },
+
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+
+            { $unwind: "$user" },
+            
+            // {
+            //     $addFields: {
+            //         latestTransaction: { $arrayElemAt: [{ $sortArray: { input: "$transaction", sortBy: { date: -1 } } }, 0] }
+            //     }
+            // },
+
+            {
+                $project: {
+                    _id: 1,
+                    ipssNumber: 1,
+                    "user.fullName": 1,
+                    lastUpdated: 1,
+                    totalAmount: 1,
+                    userId: 1,
+                    // transaction: { $cond: { if: { $gt: [{ $size: "$transaction" }, 0] }, then: ["$latestTransaction"], else: [] } }
+                    transaction: 1
+                }
+            }
+        ]);
+
+        if (!savings || savings.length === 0) {
+            return res.status(404).json({message: "No saving found"})
+        }
+
+        const baseName = `savings_stats_${now.toISOString().slice(0,10)}`
+
+        return await savingSendXlsxFile(res, savings, baseName);
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({message: "Unable to get savings stats"})
+    }
+}
+
+
 
 module.exports = {
     makeSaving,
@@ -266,5 +361,6 @@ module.exports = {
     getTransactions,
     getUserSaving,
     getSaving,
-    getAllSavings
+    getAllSavings,
+    getSavingStats
 }
