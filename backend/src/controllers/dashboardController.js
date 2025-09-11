@@ -30,6 +30,10 @@ const userDashboard = async function (req, res) {
         const unpaidMonths = activeLoan ? activeLoan.monthlyInstallment.filter(installment => installment.paid === false).length: 0
 
         return res.status(200).json({
+            fullName: user.fullName,
+            ipssNumber: user.ipssNumber,
+            role: user.role,
+            phoneNumber: user.phoneNumber,
             totalSaving: saving ? saving.totalAmount : 0,
             LastSavingTransaction: saving ? saving.transaction : [],
             approvedLoanBalance: activeLoan ? activeLoan.repaymentAmount : 0,
