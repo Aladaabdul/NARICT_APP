@@ -51,7 +51,7 @@ const apiLimiter = rateLimit({
 });
 
 //apply rate limiting to all routes
-app.use(apiLimiter)
+// app.use(apiLimiter)
 
 
 app.use('/api/auth', userRouter);
