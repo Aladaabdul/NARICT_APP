@@ -270,7 +270,7 @@ const getSavingStats = async function(req, res) {
 
         const now = new Date();
 
-        const { range } = req.query; // e.g. "today", "week", "month"
+        const { range, startDate: qStart, endDate: qEnd } = req.query;
 
         let startDate, endDate;
 
@@ -292,6 +292,20 @@ const getSavingStats = async function(req, res) {
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
             endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
             endDate.setHours(23, 59, 59, 999);
+
+        case "custom":
+            if (!qStart || !qEnd) {
+                return res.status(400).json({ error: "Start and End dates are required for custom range" });
+            }
+            startDate = new Date(qStart);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(qEnd);
+            endDate.setHours(23, 59, 59, 999);
+
+            if (isNaN(startDate) || isNaN(endDate)) {
+                return res.status(400).json({ error: "Invalid date format for startDate or endDate" });
+            }
+
             break;
 
         default:
